@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multi Symbol Order Book – Live (Binance)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#0f1629; --muted:#8da2c0; --line:#1b2336;
+      --bid:#26a69a; --ask:#ef5350; --text:#e6edf3;
+    }
+    *{ box-sizing:border-box }
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+    }
+
+    /* Top toolbar */
+    header{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px; border-bottom:1px solid #223 }
+    header h1{ font-size:16px; margin:0 8px 0 0; font-weight:600 }
+    .toolbar{ display:flex; flex-wrap:wrap; gap:8px; align-items:center }
+    input,select,button,textarea{
+      background:var(--panel); border:1px solid #2a3550; color:var(--text);
+      border-radius:10px; padding:8px 10px;
+    }
+    input::placeholder, textarea::placeholder{ color:#9fb1cf }
+    button{ cursor:pointer }
+    .tag{ font-size:12px; border:1px solid #2a3550; border-radius:999px; padding:2px 8px }
+    .muted{ color:var(--muted); font-size:12px }
+
+    main{ padding:14px 16px }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); gap:12px }
+
+    /* Card */
+    .card{
+      background:var(--panel); border:1px solid var(--line);
+      border-radius:14px; overflow:hidden; display:flex; flex-direction:column; min-width:0;
+    }
+    .pill{ font-weight:700; letter-spacing:.3px; border-radius:999px; padding:4px 10px; background:#0e1a2e; border:1px solid #223552 }
+    .grow{ flex:1 }
+    .price{ font-weight:700 }
+
+    /* Two-line card head */
+    .card .head{ border-bottom:1px solid var(--line); padding:10px 12px }
+    .card .head-top{
+      display:grid; grid-template-columns:auto auto 1fr auto auto; gap:8px; align-items:center;
+    }
+    .card .head-bottom{
+      margin-top:6px; min-height:18px; display:flex; justify-content:center; align-items:center;
+    }
+    .card .status{ font-size:12px; color:var(--muted) }
+    .close{ background:#1a243b; border:1px solid #2b3759; border-radius:8px; padding:4px 8px }
+
+    .mid{
+      display:flex; gap:8px; justify-content:center; align-items:center;
+      padding:8px 12px; border:1px dashed var(--line); border-radius:10px;
+      margin:10px auto; max-width:360px; color:var(--muted);
+    }
+    .mid .big{ font-size:18px; color:var(--text); font-weight:700 }
+
+    .minirow{ display:flex; gap:8px; align-items:center }
+
+    /* Order book panes */
+    .book{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:8px 10px }
+    .pane{ border:1px solid var(--line); border-radius:10px; overflow:hidden }
+    .pane header{ padding:8px 10px; border-bottom:1px solid var(--line); font-weight:600 }
+    .tblwrap{ overflow:auto; max-height:600px }
+    table{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums }
+    th,td{ padding:6px 8px; border-bottom:1px solid var(--line); font-size:13px }
+    th{ color:var(--muted); font-weight:600; text-align:right }
+    td{ white-space:nowrap; text-align:right; position:relative }
+    th:first-child, td:first-child{ text-align:left }
+    tr.bid td{ color:var(--bid) }
+    tr.ask td{ color:var(--ask) }
+
+    /* Heatmap: bids → qty cell, asks → price cell */
+    td.qty::before, td.px::before{
+      content:""; position:absolute; top:0; bottom:0; pointer-events:none; opacity:.35;
+    }
+    tr.bid td.qty::before{ right:0; left:calc(100% - var(--q,0%)); background:var(--bid) }
+    tr.ask td.px::before{ left:0; right:calc(100% - var(--q,0%)); background:var(--ask) }
+
+    /* Drawers (Settings/Help) */
+    .drawer{
+      position:fixed; right:16px; top:64px; width:460px; max-width:95vw; max-height:86vh; overflow:auto;
+      background:var(--panel); border:1px solid #1b2336; border-radius:12px; box-shadow:0 10px 40px rgba(0,0,0,.5);
+      padding:12px; display:none; z-index:50;
+    }
+    .drawer.open{ display:block }
+    .drawer h3{ margin:4px 0 10px }
+    .row{ display:flex; gap:8px; align-items:center; margin:8px 0 }
+    .row label{ flex:1 }
+    .row input, .row textarea{ flex:1 }
+    .btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:10px }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Multi Symbol Order Book – Live (Binance)</h1>
+    <div id="toolbar" class="toolbar">
+      <label>Pairs (comma-separated): <input id="symbols" placeholder="e.g. BTCUSDC,ETHUSDC,BNBUSDC,SOLUSDC" style="width:280px"></label>
+      <label>Levels: <input id="levels" type="number" min="50" max="200" value="50" style="width:90px"></label>
+      <label>Step:
+        <select id="stepSel" title="Price aggregation step (tick multiplier)">
+          <option value="1">None</option>
+          <option value="5">×5 ticks</option>
+          <option value="10">×10 ticks</option>
+        </select>
+      </label>
+      <button id="addBtn">Add</button>
+      <button id="clearBtn">Close all cards</button>
+      <button id="btnSettings">⚙️ Settings</button>
+      <button id="btnHelp">❓ Help</button>
+      <span class="tag muted">Default: <span id="defaultBadge">—</span></span>
+    </div>
+  </header>
+
+  <main>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <!-- Settings drawer -->
+  <div id="settings" class="drawer" aria-label="Settings">
+    <h3>Defaults</h3>
+    <div class="row">
+      <label for="defPairs">Default pairs (comma-separated):</label>
+      <textarea id="defPairs" rows="3" placeholder="e.g. BTCUSDC,ETHUSDC,BNBUSDC,SOLUSDC"></textarea>
+    </div>
+    <div class="row">
+      <label for="defLevels">Default levels:</label>
+      <input id="defLevels" type="number" min="50" max="200" value="50" />
+    </div>
+    <small class="muted">
+      Defaults take effect on first load (or when no saved list exists).
+      “Save + apply now” will open the cards immediately with these.
+    </small>
+    <div class="btns">
+      <button id="btnSaveDefaults">Save</button>
+      <button id="btnApplyDefaults">Save + apply now</button>
+      <button id="btnCloseSettings">Close</button>
+    </div>
+  </div>
+
+  <!-- Help drawer -->
+  <div id="help" class="drawer" aria-label="Help">
+    <h3>User Guide</h3>
+    <p><strong>What is this?</strong> Real-time Binance Spot <code>@depth@100ms</code> (order book) and <code>@trade</code> price streams across multiple pairs. At most <strong>4 cards</strong> can be open at once.</p>
+    <h4>How to use?</h4>
+    <ul>
+      <li>Enter the pairs separated by commas (e.g. <code>BTCUSDC,ETHUSDC</code>), then click <em>Add</em> or press Enter.</li>
+      <li>If you reach the 4-card limit, adding a new pair is not allowed. Close a card with the ❌ button.</li>
+      <li><em>Levels</em>: how many price levels to display per side (50–200).</li>
+      <li><em>Step</em>: aggregate price levels with a tick multiplier (×5, ×10) for a cleaner view.</li>
+      <li>Per card, <em>Precision</em> can be set in the header: <em>Auto</em> or fixed decimals (0–8).</li>
+    </ul>
+    <h4>Under the hood</h4>
+    <ul>
+      <li>Startup: <em>subscribe depth/trade via HUB</em> → fetch snapshot → <em>flush buffered</em> WS events → live updates. GAP ⇒ adaptive resync.</li>
+      <li>Trade stream gives the fastest last price update in the header.</li>
+    </ul>
+    <div class="btns">
+      <button id="btnCloseHelp">Close</button>
+    </div>
+  </div>
+
+  <script>
+  (()=>{
+
+    // ---------- Storage Keys ----------
+    const LS = {
+      list:'obl_symlist', levels:'obl_levels', step:'obl_step', lastInput:'obl_lastInput',
+      defPairs:'obl_def_pairs', defLevels:'obl_def_levels', cardPrefs:'obl_card_prefs'
+    };
+
+    const DEFAULT_FALLBACK_PAIRS = ['BTCUSDC','ETHUSDC','BNBUSDC','SOLUSDC'];
+    const DEFAULT_FALLBACK_LEVELS = 50;
+
+    // ---------- DOM ----------
+    const grid = document.getElementById('grid');
+    const symbolsInput = document.getElementById('symbols');
+    const levelsEl = document.getElementById('levels');
+    const stepSel = document.getElementById('stepSel');
+    const addBtn = document.getElementById('addBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const defaultBadge = document.getElementById('defaultBadge');
+
+    const drawer = document.getElementById('settings');
+    const btnSettings = document.getElementById('btnSettings');
+    const btnCloseSettings = document.getElementById('btnCloseSettings');
+    const btnSaveDefaults = document.getElementById('btnSaveDefaults');
+    const btnApplyDefaults = document.getElementById('btnApplyDefaults');
+    const defPairsEl = document.getElementById('defPairs');
+    const defLevelsEl = document.getElementById('defLevels');
+
+    const helpDrawer = document.getElementById('help');
+    const btnHelp = document.getElementById('btnHelp');
+    const btnCloseHelp = document.getElementById('btnCloseHelp');
+
+    // ---------- Live State ----------
+    const active = new Map();
+
+    // Resync queue with limited concurrency (2) + jitter
+    const resyncQueue = [];
+    const resyncQueued = new Set();
+    const cooldownAt = new Map();
+    const backoffSec = new Map();
+    let inflightResync = 0;
+    const RESYNC_CONCURRENCY = 2;
+    let resyncTicker = null;
+
+    function getBackoff(sym){ return backoffSec.get(sym) || 10; }
+    function growBackoff(sym){ const n=Math.min(Math.round(getBackoff(sym)*1.7),60); backoffSec.set(sym,n); return n; }
+    function resetBackoff(sym){ backoffSec.set(sym,10); }
+
+    function enqueueResync(sym, why, immediate=false){
+      if (!active.has(sym)) return;
+      if (!resyncQueued.has(sym)){ resyncQueued.add(sym); resyncQueue.push(sym); }
+      const ids = idsFor(sym);
+      const st = document.getElementById(ids.status);
+      if (st) st.textContent = (why || 'Reconnect scheduled…');
+
+      const base = immediate ? 0 : getBackoff(sym);
+      const jitter = Math.floor(Math.random()*1200);
+      const when = Date.now() + (immediate ? 0 : base*1000 + jitter);
+      cooldownAt.set(sym, Math.min(cooldownAt.get(sym) ?? Infinity, when));
+    }
+
+    async function processResyncQueue(){
+      if (inflightResync >= RESYNC_CONCURRENCY || !resyncQueue.length) return;
+      const now = Date.now();
+      let pick = -1, sym = null;
+      for (let i=0;i<resyncQueue.length;i++){
+        const s = resyncQueue[i];
+        if ((cooldownAt.get(s) ?? 0) <= now){ pick=i; sym=s; break; }
+      }
+      if (pick<0) return;
+
+      resyncQueue.splice(pick,1);
+      resyncQueued.delete(sym);
+      cooldownAt.delete(sym);
+
+      const rec = active.get(sym);
+      if (!rec) return;
+
+      inflightResync++;
+      try{
+        const ok = await performResync(sym, rec);
+        if (ok) resetBackoff(sym);
+        else { growBackoff(sym); enqueueResync(sym,'retry'); }
+      }catch{
+        growBackoff(sym); enqueueResync(sym,'error-retry');
+      }finally{
+        inflightResync--;
+      }
+    }
+    function startResyncTicker(){
+      if (resyncTicker) clearInterval(resyncTicker);
+      resyncTicker = setInterval(processResyncQueue, 300);
+    }
+
+    // ---------- Defaults ----------
+    function loadUserDefaults(){
+      let pairs = DEFAULT_FALLBACK_PAIRS.slice();
+      let levels = DEFAULT_FALLBACK_LEVELS;
+      try{
+        const p = JSON.parse(localStorage.getItem(LS.defPairs) || 'null');
+        if (Array.isArray(p) && p.length) pairs = p.map(s=>String(s).toUpperCase().trim()).filter(Boolean);
+      }catch{}
+      const lv = Number(localStorage.getItem(LS.defLevels));
+      if (!Number.isNaN(lv) && lv>=50 && lv<=200) levels = Math.floor(lv);
+      return {pairs, levels};
+    }
+    function updateDefaultBadge(){
+      const {pairs, levels} = loadUserDefaults();
+      defaultBadge.textContent = `${pairs.join(', ')} · Levels: ${levels}`;
+    }
+    function loadActiveList(){
+      try{
+        const j = JSON.parse(localStorage.getItem(LS.list) || 'null');
+        if (Array.isArray(j) && j.length) return j.slice(0,4);
+      }catch{}
+      return loadUserDefaults().pairs.slice(0,4);
+    }
+    function saveActiveList(){
+      try{ localStorage.setItem(LS.list, JSON.stringify([...active.keys()])); }catch{}
+    }
+
+    function loadGlobals(){
+      const def = loadUserDefaults();
+      const lvStored = Number(localStorage.getItem(LS.levels));
+      levelsEl.value = !Number.isNaN(lvStored) ? Math.max(50, Math.min(200, lvStored)) : def.levels;
+      const st = localStorage.getItem(LS.step);
+      if (st==='1'||st==='5'||st==='10') stepSel.value = st;
+    }
+    function saveGlobals(){
+      try{
+        localStorage.setItem(LS.levels, String(levelsEl.value));
+        localStorage.setItem(LS.step, String(stepSel.value));
+      }catch{}
+      for (const s of active.keys()) scheduleRender(s);
+    }
+
+    function loadCardPrefs(){
+      try{ const j = JSON.parse(localStorage.getItem(LS.cardPrefs) || 'null'); return j && typeof j==='object' ? j : {}; }
+      catch{ return {}; }
+    }
+    const cardPrefs = loadCardPrefs();
+    function saveCardPrefs(obj){
+      try{ localStorage.setItem(LS.cardPrefs, JSON.stringify(obj)); }catch{}
+    }
+
+    symbolsInput.value = localStorage.getItem(LS.lastInput) || '';
+    symbolsInput.addEventListener('input', ()=> localStorage.setItem(LS.lastInput, symbolsInput.value));
+    [levelsEl, stepSel].forEach(el=>{
+      el.addEventListener('input', saveGlobals);
+      el.addEventListener('change', saveGlobals);
+    });
+
+    // ---------- Helpers ----------
+    function idsFor(sym){
+      const id = sym.toUpperCase();
+      return { card:'card_'+id, price:'price_'+id, status:'status_'+id, mid:'mid_'+id, bids:'bids_'+id, asks:'asks_'+id, decsel:'decsel_'+id };
+    }
+    function fmtQty(q,d){ const digits=Math.min(8,Math.max(0,d==null?8:d)); return Number(q).toLocaleString(undefined,{maximumFractionDigits:digits}); }
+    function fmtPx(n,d){ return Number(n).toLocaleString(undefined,{maximumFractionDigits:d}); }
+
+    async function fetchExchangeInfo(sym){
+      const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),5000);
+      try{
+        const r=await fetch(`https://api.binance.com/api/v3/exchangeInfo?symbol=${encodeURIComponent(sym)}`,{cache:'no-store',signal:ctrl.signal});
+        if(!r.ok) return null;
+        const j=await r.json(); const s=(j.symbols&&j.symbols[0])||null; if(!s) return null;
+        const filters=s.filters||[];
+        const pf=filters.find(f=>f.filterType==='PRICE_FILTER');
+        const lf=filters.find(f=>f.filterType==='LOT_SIZE');
+        const tickSize = pf ? Number(pf.tickSize) : 0;
+
+        // derive decimals
+        let priceDecimals=5;
+        if (pf && typeof pf.tickSize==='string'){
+          const ts=pf.tickSize;
+          priceDecimals = ts.indexOf('.')===-1 ? 0 : Math.max(0, ts.replace(/0+$/,'').split('.')[1].length);
+        }else if (tickSize>0){
+          const ts=String(tickSize), dot=ts.indexOf('.');
+          priceDecimals = dot===-1 ? 0 : Math.max(0, ts.replace(/0+$/,'').length - dot - 1);
+        }else{
+          priceDecimals = s.pricePrecision ?? 5;
+        }
+        let qtyDecimals=8;
+        if (lf && typeof lf.stepSize==='string'){
+          const qs=lf.stepSize;
+          qtyDecimals = qs.indexOf('.')===-1 ? 0 : Math.max(0, qs.replace(/0+$/,'').split('.')[1].length);
+        }else if (typeof s.baseAssetPrecision==='number'){
+          qtyDecimals = s.baseAssetPrecision;
+        }
+        qtyDecimals = Math.min(8, Math.max(0, qtyDecimals));
+        return { tickSize, priceDecimals, qtyDecimals };
+      }finally{ clearTimeout(t); }
+    }
+
+    async function fetchSnapshot(sym){
+      const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),5000);
+      try{
+        const r=await fetch(`https://api.binance.com/api/v3/depth?symbol=${encodeURIComponent(sym)}&limit=1000`,{cache:'no-store',signal:ctrl.signal});
+        if(!r.ok) return null;
+        return r.json();
+      }finally{ clearTimeout(t); }
+    }
+
+    function applyLevel(map, price, qty){
+      const p=+price, q=+qty;
+      if (q===0) map.delete(p); else map.set(p,q);
+    }
+
+    function getDispDecimals(rec){
+      return rec.dispMode==='fixed' ? Math.max(0,Math.min(8,rec.dispDec||0)) : 8; // Auto (max)
+    }
+    function aggregateForDisplay(levelsArr, side, tickSize, displayDecimals){
+      const displayTick = Math.pow(10,-displayDecimals);
+      const baseTick = Math.max(tickSize||displayTick, displayTick);
+      const stepFactor = Math.max(1, Number(stepSel.value)||1);
+      const group = baseTick * stepFactor;
+      if (!group || group===tickSize) return levelsArr;
+      const bucketMap=new Map();
+      for (const [p,q] of levelsArr){
+        const bucket = Math.round(p/group)*group; // display-friendly rounding
+        const key = Number(bucket.toFixed(Math.max(displayDecimals,8)));
+        bucketMap.set(key, (bucketMap.get(key)||0)+q);
+      }
+      const sorted = [...bucketMap.entries()].sort((a,b)=> side==='bid' ? b[0]-a[0] : a[0]-b[0]);
+      return sorted;
+    }
+
+    // ---------- WebSocket Hub: one connection, many streams ----------
+    const wsHub = (() => {
+      const BASES = [
+        'wss://stream.binance.com:9443/stream',
+        'wss://data-stream.binance.vision/stream'
+      ];
+      let hostIdx = Math.floor(Math.random()*BASES.length);
+      let ws = null;
+      let connected = false;
+      let sendQueue = [];
+      const want = new Set(); // e.g. 'BTCUSDC@depth@100ms', 'BTCUSDC@trade'
+      let reconnectBackoff = 2000; // ms, grows up to 30s
+      const MAX_BACKOFF = 30000;
+
+      function url(){ return BASES[hostIdx % BASES.length]; }
+
+      function ensureOpen(){
+        if (ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) return;
+        try { ws && ws.close(); } catch {}
+        ws = new WebSocket(url());
+        ws.onopen = () => {
+          connected = true;
+          // flush pending messages then resubscribe everything
+          for (const msg of sendQueue){ try{ ws.send(JSON.stringify(msg)); }catch{} }
+          sendQueue = [];
+          if (want.size){
+            const params = [...want];
+            try{ ws.send(JSON.stringify({method:'SUBSCRIBE', params, id:Date.now()})); } catch {}
+          }
+          reconnectBackoff = 2000;
+        };
+        ws.onclose = () => {
+          connected = false;
+          hostIdx = (hostIdx + 1) % BASES.length;
+          setTimeout(ensureOpen, reconnectBackoff + Math.floor(Math.random()*700));
+          reconnectBackoff = Math.min(Math.round(reconnectBackoff*1.7), MAX_BACKOFF);
+        };
+        ws.onerror = () => {/* onclose handles */};
+        ws.onmessage = (ev) => {
+          let raw; try{ raw = JSON.parse(ev.data); }catch{ return; }
+		  if (raw && Object.prototype.hasOwnProperty.call(raw, 'result')) return; // ignore acks
+          const stream = raw.stream || '';
+          const data = raw.data || raw;
+          if (!stream) return;
+
+          const [symLower, rest] = stream.split('@');
+          const sym = symLower ? symLower.toUpperCase() : '';
+          if (!sym) return;
+          const rec = active.get(sym);
+          if (!rec) return;
+
+          if (rest && rest.startsWith('depth')){
+            const e = data;
+            const evt = { U:e.U, u:e.u, b:e.b, a:e.a, E:e.E };
+            if (!rec.synced){
+              (rec.buffer ||= []).push(evt);
+              return;
+            }
+            if (evt.u <= rec.lastU) return;
+            if (evt.U > rec.lastU + 1){
+              const ids = idsFor(sym);
+              const st = document.getElementById(ids.status);
+              if (st) st.textContent = 'GAP – resync scheduled';
+              enqueueResync(sym,'gap');
+              return;
+            }
+            evt.b?.forEach(([p,q])=> applyLevel(rec.bids,p,q));
+            evt.a?.forEach(([p,q])=> applyLevel(rec.asks,p,q));
+            rec.lastU = evt.u;
+            scheduleRender(sym);
+          } else if (rest && rest.startsWith('trade')){
+            const t = data;
+            const price = parseFloat(t.p);
+            if (!Number.isFinite(price)) return;
+            const ids = idsFor(sym);
+            const priceEl = document.getElementById(ids.price);
+            if (priceEl){
+              const dispDec = getDispDecimals(rec);
+              priceEl.textContent = price.toLocaleString(undefined,{maximumFractionDigits:dispDec});
+            }
+          }
+        };
+      }
+
+      function send(msg){
+        if (connected && ws && ws.readyState===WebSocket.OPEN){
+          try{ ws.send(JSON.stringify(msg)); }catch{ sendQueue.push(msg); }
+        }else{
+          sendQueue.push(msg);
+          ensureOpen();
+        }
+      }
+
+function subscribe(sym){
+  const base = sym.toLowerCase();
+  const a = [`${base}@depth@100ms`, `${base}@trade`]; // <-- lowercase
+  let changed = false;
+  for (const k of a){ if (!want.has(k)){ want.add(k); changed = true; } }
+  ensureOpen();
+  if (connected && changed){
+    send({method:'SUBSCRIBE', params:a, id:Date.now()});
+  }
+}
+
+function unsubscribe(sym){
+  const base = sym.toLowerCase();
+  const a = [`${base}@depth@100ms`, `${base}@trade`]; // <-- lowercase
+  const params = a.filter(k=> want.has(k));
+  if (params.length){
+    for (const k of params) want.delete(k);
+    if (connected) send({method:'UNSUBSCRIBE', params, id:Date.now()});
+  }
+}
+
+
+      return { subscribe, unsubscribe, ensureOpen };
+    })();
+
+    // ---------- Cards ----------
+    function createCard(sym){
+      const ids = idsFor(sym);
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.id = ids.card;
+      card.innerHTML = `
+        <div class="head">
+          <div class="head-top">
+            <span class="pill">${sym}</span>
+            <div class="minirow">
+              <label class="muted">Precision:
+                <select id="${ids.decsel}" title="Display decimals">
+                  <option value="auto">Auto (max)</option>
+                  <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                  <option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                </select>
+              </label>
+            </div>
+            <span class="grow"></span>
+            <span>Price: <span id="${ids.price}" class="price">—</span></span>
+            <button class="close" title="Close card">❌</button>
+          </div>
+          <div class="head-bottom">
+            <span id="${ids.status}" class="status">Connecting…</span>
+          </div>
+        </div>
+
+        <div class="mid">Mid price: <span class="big" id="${ids.mid}">—</span></div>
+        <div class="book">
+          <div class="pane">
+            <header>Bids</header>
+            <div class="tblwrap"><table>
+              <thead><tr><th>Price</th><th>Quantity</th></tr></thead>
+              <tbody id="${ids.bids}"></tbody>
+            </table></div>
+          </div>
+          <div class="pane">
+            <header>Asks</header>
+            <div class="tblwrap"><table>
+              <thead><tr><th>Price</th><th>Quantity</th></tr></thead>
+              <tbody id="${ids.asks}"></tbody>
+            </table></div>
+          </div>
+        </div>`;
+      card.querySelector('.close').addEventListener('click', ()=> removeSymbol(sym));
+      grid.appendChild(card);
+    }
+
+    function removeSymbol(sym){
+      wsHub.unsubscribe(sym);
+      const rec = active.get(sym);
+      if (rec){
+        rec.manual = true;
+        try{ rec.wsDepth && rec.wsDepth.close(); }catch{}
+        try{ rec.wsTrade && rec.wsTrade.close(); }catch{}
+        if (rec.raf) cancelAnimationFrame(rec.raf);
+      }
+      active.delete(sym);
+      const qi=resyncQueue.indexOf(sym);
+      if(qi>=0) resyncQueue.splice(qi,1);
+      resyncQueued.delete(sym); cooldownAt.delete(sym); backoffSec.delete(sym);
+
+      const ids = idsFor(sym);
+      const el = document.getElementById(ids.card);
+      if (el) el.remove();
+      saveActiveList();
+    }
+
+    // ---------- Render ----------
+    function scheduleRender(sym){
+      const rec = active.get(sym); if(!rec) return;
+      if (rec.needsDraw) return;
+      rec.needsDraw = true;
+      rec.raf = requestAnimationFrame(()=>{ rec.needsDraw=false; renderCard(sym); });
+    }
+
+    function renderCard(sym){
+      const rec = active.get(sym); if(!rec) return;
+      const ids = idsFor(sym);
+      const bidsT=document.getElementById(ids.bids);
+      const asksT=document.getElementById(ids.asks);
+      const midEl=document.getElementById(ids.mid);
+      const priceEl=document.getElementById(ids.price);
+      if(!bidsT||!asksT) return;
+
+      const L = Math.max(50, Math.min(200, parseInt(levelsEl.value||'50',10)));
+      const dispDec = getDispDecimals(rec);
+
+      const bidAll = [...rec.bids.entries()].sort((a,b)=> b[0]-a[0]);
+      const askAll = [...rec.asks.entries()].sort((a,b)=> a[0]-b[0]);
+
+      if (bidAll.length && askAll.length){
+        const bestBid = bidAll[0][0], bestAsk = askAll[0][0];
+        const mid = (bestBid + bestAsk)/2;
+        if (midEl) midEl.textContent = mid.toLocaleString(undefined,{minimumFractionDigits:dispDec, maximumFractionDigits:dispDec});
+        if (priceEl) priceEl.textContent = mid.toLocaleString(undefined,{maximumFractionDigits:dispDec});
+      }
+
+      const bidDisp = aggregateForDisplay(bidAll,'bid',rec.tick,dispDec).slice(0,L);
+      const askDisp = aggregateForDisplay(askAll,'ask',rec.tick,dispDec).slice(0,L);
+
+      const maxBidQty = bidDisp.reduce((m,[,q])=>Math.max(m,q),0);
+      const maxAskQty = askDisp.reduce((m,[,q])=>Math.max(m,q),0);
+
+      bidsT.innerHTML=''; asksT.innerHTML='';
+
+      // BIDS: heatmap → quantity cell
+      for(const [p,q] of bidDisp){
+        const qp = maxBidQty ? (q/maxBidQty*100).toFixed(1)+'%' : '0%';
+        const tr=document.createElement('tr'); tr.className='bid';
+        tr.innerHTML = `<td>${fmtPx(p,dispDec)}</td><td class="qty" style="--q:${qp}">${fmtQty(q,rec.qtyDec)}</td>`;
+        bidsT.appendChild(tr);
+      }
+
+      // ASKS: heatmap → price cell
+      for(const [p,q] of askDisp){
+        const qp = maxAskQty ? (q/maxAskQty*100).toFixed(1)+'%' : '0%';
+        const tr=document.createElement('tr'); tr.className='ask';
+        tr.innerHTML = `<td class="px" style="--q:${qp}">${fmtPx(p,dispDec)}</td><td>${fmtQty(q,rec.qtyDec)}</td>`;
+        asksT.appendChild(tr);
+      }
+    }
+
+    // ---------- Resync (returns true on success) ----------
+    async function performResync(sym, rec){
+      const ids = idsFor(sym);
+      const statusEl = document.getElementById(ids.status);
+
+      // Reset state (WS-t a HUB kezeli)
+      rec.bids.clear(); rec.asks.clear();
+      rec.lastU = null; rec.synced = false;
+      rec.buffer = [];
+
+      if (statusEl) statusEl.textContent = 'exchangeInfo…';
+      const info = await fetchExchangeInfo(sym);
+      if (!info){ if (statusEl) statusEl.textContent = 'exchangeInfo error – retry later'; return false; }
+      rec.tick = info.tickSize;
+      rec.priceDec = info.priceDecimals;
+      rec.qtyDec = info.qtyDecimals;
+
+      // Előbb feliratkozunk, hogy a köztes depth eventek pufferbe menjenek
+      wsHub.subscribe(sym);
+
+      if (statusEl) statusEl.textContent = 'Snapshot…';
+      const snap = await fetchSnapshot(sym);
+      if (!snap){ if (statusEl) statusEl.textContent = 'Snapshot error – retry later'; return false; }
+
+      for (const [p,q] of snap.bids) applyLevel(rec.bids, p, q);
+      for (const [p,q] of snap.asks) applyLevel(rec.asks, p, q);
+      rec.lastU = snap.lastUpdateId;
+
+      // Puffer ürítése U/u szabállyal
+      rec.buffer.sort((a,b)=> a.u - b.u);
+      for (const evt of rec.buffer){
+        if (evt.u <= rec.lastU) continue;
+        if (evt.U > rec.lastU + 1){
+          if (statusEl) statusEl.textContent = 'GAP after snapshot – resync';
+          enqueueResync(sym, 'gap-after-snapshot');
+          return true;
+        }
+        evt.b?.forEach(([p,q])=> applyLevel(rec.bids,p,q));
+        evt.a?.forEach(([p,q])=> applyLevel(rec.asks,p,q));
+        rec.lastU = evt.u;
+      }
+      rec.buffer = [];
+      rec.synced = true;
+      if (statusEl) statusEl.textContent = 'Live';
+      scheduleRender(sym);
+      return true;
+    }
+
+    // ---------- Open symbol ----------
+    function openSymbol(sym){
+      sym = sym.toUpperCase();
+      if (!/^[A-Z0-9]{6,}$/.test(sym)) return;
+      if (active.has(sym)) return;
+
+      if (active.size >= 4){ alert('You’ve reached the 4-card limit. Close a card to add a new one.'); return; }
+
+      createCard(sym);
+      const ids = idsFor(sym);
+      const decSel = document.getElementById(ids.decsel);
+
+      const pref = (()=>{ try{ const all=JSON.parse(localStorage.getItem(LS.cardPrefs)||'null')||{}; return all[sym]||{mode:'auto',dec:8}; }catch{ return {mode:'auto',dec:8}; }})();
+      const rec = {
+        manual:false,
+        bids:new Map(), asks:new Map(), lastU:null,
+        tick:0, priceDec:5, qtyDec:8,
+        dispMode:(pref.mode==='fixed'?'fixed':'auto'), dispDec:Math.max(0,Math.min(8,pref.dec||0)),
+        needsDraw:false, raf:null,
+        buffer:[]
+      };
+      active.set(sym, rec);
+
+      decSel.value = rec.dispMode==='fixed' ? String(rec.dispDec) : 'auto';
+      decSel.addEventListener('change', ()=>{
+        const v=decSel.value;
+        if (v==='auto'){ rec.dispMode='auto'; }
+        else { rec.dispMode='fixed'; rec.dispDec=Math.max(0,Math.min(8,parseInt(v,10)||0)); }
+        try{ const all=JSON.parse(localStorage.getItem(LS.cardPrefs)||'null')||{}; all[sym]={mode:rec.dispMode,dec:rec.dispDec}; localStorage.setItem(LS.cardPrefs,JSON.stringify(all)); }catch{}
+        scheduleRender(sym);
+      });
+
+      enqueueResync(sym,'init',true);
+      saveActiveList();
+    }
+
+    // ---------- Add/Close ----------
+    function parsePairs(txt){
+      return String(txt||'').split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(s=>/^[A-Z0-9]{6,}$/.test(s));
+    }
+    function addSymbolsLimited(list){
+      const syms = list.map(s=>s.toUpperCase()).filter(s=>/^[A-Z0-9]{6,}$/.test(s));
+      const newOnes = syms.filter(s=>!active.has(s));
+      let remaining = 4 - active.size;
+      if (remaining<=0){ alert('You’ve reached the 4-card limit. Close a card to add a new one.'); return; }
+      const toOpen = newOnes.slice(0,remaining);
+      const skipped = newOnes.slice(remaining);
+      toOpen.forEach(s=>openSymbol(s));
+      if (skipped.length) alert('Skipped due to the 4-card limit: '+skipped.join(', '));
+    }
+    function addSymbolsFromInput(){
+      const raw = symbolsInput.value.trim();
+      if (!raw){ symbolsInput.value = [...active.keys()].join(','); return; }
+      const syms = parsePairs(raw);
+      if (!syms.length) return;
+      addSymbolsLimited(syms);
+      symbolsInput.value = ''; localStorage.setItem(LS.lastInput,'');
+    }
+    addBtn.addEventListener('click', addSymbolsFromInput);
+    clearBtn.addEventListener('click', ()=>{ [...active.keys()].forEach(s=>removeSymbol(s)); });
+    symbolsInput.addEventListener('keydown', e=>{ if(e.key==='Enter') addSymbolsFromInput(); });
+
+// ---------- Settings drawer ----------
+btnSettings.addEventListener('click', ()=>{
+  const def = loadUserDefaults();
+  defPairsEl.value = def.pairs.join(', ');
+  defLevelsEl.value = def.levels;
+  drawer.classList.add('open');
+});
+
+btnCloseSettings.addEventListener('click', ()=> drawer.classList.remove('open'));
+
+btnSaveDefaults.addEventListener('click', ()=>{
+  let pairsArr = parsePairs(defPairsEl.value);
+  pairsArr = Array.from(new Set(pairsArr)).slice(0, 4);
+  defPairsEl.value = pairsArr.join(', ');
+  const lv = Math.max(50, Math.min(200, parseInt(defLevelsEl.value || '50', 10)));
+  try{
+    localStorage.setItem(LS.defPairs, JSON.stringify(pairsArr.length ? pairsArr : DEFAULT_FALLBACK_PAIRS.slice(0,4)));
+    localStorage.setItem(LS.defLevels, String(lv));
+  }catch{}
+  updateDefaultBadge();
+});
+
+btnApplyDefaults.addEventListener('click', ()=>{
+  let pairsArr = parsePairs(defPairsEl.value);
+  pairsArr = Array.from(new Set(pairsArr)).slice(0, 4);
+  if (!pairsArr.length) pairsArr = DEFAULT_FALLBACK_PAIRS.slice(0,4);
+  defPairsEl.value = pairsArr.join(', ');
+  const lv = Math.max(50, Math.min(200, parseInt(defLevelsEl.value || '50', 10)));
+  try{
+    localStorage.setItem(LS.defPairs, JSON.stringify(pairsArr));
+    localStorage.setItem(LS.defLevels, String(lv));
+  }catch{}
+  updateDefaultBadge();
+  [...active.keys()].forEach(s => removeSymbol(s));
+  levelsEl.value = String(lv);
+  symbolsInput.value = pairsArr.join(',');
+  addSymbolsLimited(pairsArr);
+  drawer.classList.remove('open');
+});
+
+
+    // ---------- Help drawer ----------
+    btnHelp.addEventListener('click', ()=> helpDrawer.classList.add('open'));
+    btnCloseHelp.addEventListener('click', ()=> helpDrawer.classList.remove('open'));
+
+    // ---------- Init ----------
+    (function init(){
+      updateDefaultBadge();
+      loadGlobals();
+      const list = loadActiveList();
+      list.forEach(s=>openSymbol(s));
+      wsHub.ensureOpen();
+      startResyncTicker();
+    })();
+
+    // ---------- Clean ----------
+    window.addEventListener('beforeunload', ()=>{
+      if (resyncTicker) clearInterval(resyncTicker);
+      // WS hub magától bont a böngésző zárásakor
+    });
+
+  })();
+  </script>
+  </body>
+</html>
