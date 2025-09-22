@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pattern Scanner - Live (Binance)</title>
+<style>
+  :root{--bg:#0b1220;--panel:#0f1629;--fg:#e6edf3;--muted:#8da2c0;--line:#1b2336;--ok:#34d399;--warn:#fbbf24;--err:#f87171;--bull:#16a34a;--bear:#ef4444}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,Inter,Arial}
+  header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid #1e293b;background:linear-gradient(180deg,#0b1220,#0e1626)}
+  header h1{font-size:16px;margin:0 8px 0 0;color:#cbd5e1}
+  input,select,button,label{color:var(--fg)}
+  input,select,button{background:#0f1a2b;border:1px solid #233552;border-radius:10px;padding:8px 10px}
+  input::placeholder{color:#8aa0b6}
+  button{cursor:pointer;transition:.15s}
+  button:hover{filter:brightness(1.08)}
+  .muted{color:var(--muted)}
+  main{padding:14px}
+  .cards{display:block}
+  .card{margin-bottom:15px;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .head{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .pill{font-weight:700;letter-spacing:.3px;border-radius:999px;padding:4px 10px;background:#0e1a2e;border:1px solid #223552}
+  .grow{flex:1}
+  .price{font-weight:700}
+  .close{background:#1a243b;border:1px solid #2b3759;border-radius:8px;padding:4px 8px}
+  .head-status{display:flex;justify-content:center;align-items:center;min-height:18px;padding:6px 12px;border-bottom:1px solid var(--line)}
+  .status{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:#9aa4b2;font-weight:600;font-size:12px}
+  .right{text-align:right}
+  .badge{padding:2px 6px;border-radius:6px;border:1px solid #2a3c59;font-size:12px;white-space:nowrap}
+  .bull{color:#16a34a;background:#062f22;border-color:#0b5137}
+  .bear{color:#ef4444;background:#3a0e12;border-color:#7f1d1d}
+  .neutral{color:#eab308;background:#2d2507;border-color:#4d3b05}
+  .green{color:#34d399}
+  .red{color:#f87171}
+  .chip{font-size:12px;border:1px dashed #2a3c59;border-radius:999px;padding:2px 8px}
+  .drawer{position:fixed;right:16px;top:72px;width:780px;max-width:95vw;max-height:86vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);padding:12px;display:none;z-index:50}
+  .drawer.open{display:block}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0}
+  .row label{flex:1}
+  .row input[type="number"], .row textarea, .row select{flex:1}
+  fieldset{border:1px solid #233552;border-radius:10px;padding:8px 10px;margin:8px 0}
+  legend{font-size:12px;color:#9aa4b2}
+  .iv-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+  .iv-item{display:flex;align-items:center;gap:6px}
+  .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+  .tiny{font-size:12px;color:#8da2c0}
+  .presetbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .presetbar button{font-size:12px;padding:6px 8px;border-radius:10px;border:1px dashed #28405e;background:#0d1424}
+  td.entry {width: 150px;}
+  td.macd {width: 400px;}
+  td.patterns {width: 1400px;}
+  td.score.right {width: 175px;}
+  td.score.right span.badge.bull {float:left;}
+  td.state {min-width: 350px;}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Pattern Scanner - Live (Binance)</h1>
+    <label>Pairs (comma-separated): <input id="symInput" placeholder="e.g. BTCUSDC,ETHUSDC,BNBUSDC,SOLUSDC" style="min-width:280px" />
+    </label>
+
+    <fieldset style="border:1px solid #233552;border-radius:10px;padding:6px 10px">
+      <legend>Timeframes</legend>
+      <label><input type="checkbox" class="ival" value="1m">1m</label>
+      <label><input type="checkbox" class="ival" value="3m">3m</label>
+      <label><input type="checkbox" class="ival" value="5m" checked>5m</label>
+      <label><input type="checkbox" class="ival" value="15m" checked>15m</label>
+      <label><input type="checkbox" class="ival" value="30m">30m</label>
+      <label><input type="checkbox" class="ival" value="1h" checked>1h</label>
+      <label><input type="checkbox" class="ival" value="2h">2h</label>
+      <label><input type="checkbox" class="ival" value="4h" checked>4h</label>
+      <label><input type="checkbox" class="ival" value="1d" checked>1d</label>
+    </fieldset>
+
+    <label>Period (s):
+      <input id="period" type="number" min="5" max="600" value="30" style="width:100px">
+    </label>
+
+    <button id="addBtn">Add / Extend</button>
+    <button id="refreshBtn">Refresh</button>
+    <button id="btnSettings">⚙️ Settings</button>
+    <button id="btnHelp">❓ Help</button>
+
+    <span id="status" class="muted" style="margin-left:auto">Done.</span>
+  </header>
+
+  <main><div id="cards" class="cards"></div></main>
+
+  <div id="settings" class="drawer" aria-label="Settings">
+    <h3>Defaults, Strategy & Performance</h3>
+    <div class="presetbar">
+      <span class="muted" style="align-self:center">Base presets:</span>
+      <button data-preset="balanced">Balanced</button>
+      <button data-preset="trend">Trend</button>
+      <button data-preset="meanrev">Mean-rev</button>
+      <button data-preset="aggr">Aggressive</button>
+      <button data-preset="cons">Conservative</button>
+      <button data-preset="scalp">Scalp</button>
+      <button data-preset="swing">Swing</button>
+    </div>
+    <fieldset>
+      <legend>Default cards</legend>
+      <div class="row">
+        <label for="defPairs">Default pairs (comma-separated, max 4):</label>
+        <textarea id="defPairs" rows="3" placeholder="e.g. BTCUSDC,ETHUSDC,BNBUSDC,SOLUSDC"></textarea>
+      </div>
+      <div class="row" style="flex-direction:column;align-items:stretch">
+        <label>Default timeframes:</label>
+        <div class="iv-grid" id="defIntervals">
+          <label class="iv-item"><input type="checkbox" value="1m">1m</label>
+          <label class="iv-item"><input type="checkbox" value="3m">3m</label>
+          <label class="iv-item"><input type="checkbox" value="5m" checked>5m</label>
+          <label class="iv-item"><input type="checkbox" value="15m" checked>15m</label>
+          <label class="iv-item"><input type="checkbox" value="30m">30m</label>
+          <label class="iv-item"><input type="checkbox" value="1h" checked>1h</label>
+          <label class="iv-item"><input type="checkbox" value="2h">2h</label>
+          <label class="iv-item"><input type="checkbox" value="4h" checked>4h</label>
+          <label class="iv-item"><input type="checkbox" value="1d" checked>1d</label>
+        </div>
+      </div>
+      <div class="row">
+        <label for="defPeriod">Default period (s):</label>
+        <input id="defPeriod" type="number" min="5" max="600" value="30" style="width:120px">
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Per-timeframe strategy presets (mapping)</legend>
+      <div id="tfPresetGrid" class="grid4"></div>
+      <div class="tiny">Tip: Scalp 1m–5m, Balanced 15m–1h, Swing 4h–1d – tetszés szerint finomhangolható.</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>HTF regime filters</legend>
+      <div class="grid2">
+        <label><input type="checkbox" id="cfg_useHTF" checked> Use HTF #1</label>
+        <label>HTF #1 ratio <input id="cfg_htfRatio" type="number" step="0.5" min="2" max="60" value="4"></label>
+        <label><input type="checkbox" id="cfg_requireHTFSlope" checked> Require EMA50 slope #1</label>
+        <label><input type="checkbox" id="cfg_useHTF2"> Use HTF #2</label>
+        <label>HTF #2 ratio <input id="cfg_htfRatio2" type="number" step="0.5" min="2" max="120" value="12"></label>
+        <label><input type="checkbox" id="cfg_requireHTFSlope2"> Require EMA50 slope #2</label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Adaptive filters (volatility regime by ATR%)</legend>
+      <div class="grid3">
+        <label>ATR% low ≤ <input id="cfg_atrLowPct" type="number" step="0.01" value="0.60"></label>
+        <label>ATR% high ≥ <input id="cfg_atrHighPct" type="number" step="0.01" value="2.50"></label>
+        <label>Confirm next bar <input id="cfg_confirmNext" type="checkbox"></label>
+        <label>ΔminScore @ low <input id="cfg_adaptMinLow" type="number" step="0.01" value="-0.10"></label>
+        <label>ΔminScore @ high <input id="cfg_adaptMinHigh" type="number" step="0.01" value="+0.20"></label>
+        <label>ATR mult × low <input id="cfg_adaptAtrLow" type="number" step="0.01" value="0.85"></label>
+        <label>ATR mult × high <input id="cfg_adaptAtrHigh" type="number" step="0.01" value="1.15"></label>
+      </div>
+      <div class="tiny">ATR% = ATR(14)/Close × 100 alapján lazít/szigorít.</div>
+    </fieldset>
+
+    <fieldset id="patternCfg">
+      <legend>Pattern config (numeric inputs)</legend>
+      <div class="grid3">
+        <label><input type="checkbox" id="cfg_enCandle" checked> Candle / EMA-stack</label>
+        <label><input type="checkbox" id="cfg_enMACD" checked> MACD</label>
+        <label><input type="checkbox" id="cfg_enRSI" checked> RSI</label>
+        <label><input type="checkbox" id="cfg_enDiv" checked> Divergence</label>
+        <label><input type="checkbox" id="cfg_enHiddenDiv" checked> Hidden divergence</label>
+        <label><input type="checkbox" id="cfg_enBOS" checked> BOS</label>
+        <label><input type="checkbox" id="cfg_enVol" checked> Volume spike</label>
+        <label><input type="checkbox" id="cfg_enBB" checked> Bollinger</label>
+        <label><input type="checkbox" id="cfg_enTDI" checked> TDI</label>
+        <label><input type="checkbox" id="cfg_enChart" checked> Chart patterns</label>
+        <label><input type="checkbox" id="cfg_enHA"> Heikin Ashi trend</label>
+      </div>
+
+      <hr style="border-color:#233552">
+
+      <div class="grid3">
+        <label>Min signal score <input id="cfg_minSignalScore" type="number" step="0.1" value="0.8"></label>
+        <label>ATR multiplier <input id="cfg_atrMult" type="number" step="0.01" min="0" max="3" value="0.3"></label>
+        <label>Doji body ≤% <input id="cfg_dojiBodyPct" type="number" step="0.01" min="0.02" max="0.5" value="0.10"></label>
+        <label>Soldiers/Crows min% <input id="cfg_soldierMinBodyPct" type="number" step="0.01" min="0.3" max="0.95" value="0.55"></label>
+        <label>Volume × SMA20 <input id="cfg_volMult" type="number" step="0.1" min="1" max="5" value="1.6"></label>
+        <label>BB length <input id="cfg_bbLen" type="number" min="5" max="100" value="20"></label>
+        <label>BB k <input id="cfg_bbK" type="number" step="0.1" min="0.5" max="4" value="2.0"></label>
+        <label>BB squeeze ≤% <input id="cfg_bbSqueezePct" type="number" step="0.1" min="0.5" max="20" value="4.0"></label>
+        <label>TDI RSI len <input id="cfg_tdiRsiLen" type="number" min="5" max="50" value="14"></label>
+        <label>TDI Signal len <input id="cfg_tdiSignalLen" type="number" min="2" max="30" value="7"></label>
+        <label>TDI BB len <input id="cfg_tdiBbLen" type="number" min="5" max="100" value="34"></label>
+        <label>TDI BB k <input id="cfg_tdiBbK" type="number" step="0.01" min="0.5" max="3" value="1.618"></label>
+        <label>Pivot L <input id="cfg_pivotLeft" type="number" min="1" max="15" value="3"></label>
+        <label>Pivot R <input id="cfg_pivotRight" type="number" min="1" max="15" value="3"></label>
+        <label>Chart lookback <input id="cfg_chartLookback" type="number" min="40" max="500" value="120"></label>
+        <label>DT/DB tol % <input id="cfg_dblTolPct" type="number" step="0.01" min="0.05" max="5" value="0.30"></label>
+      </div>
+
+      <hr style="border-color:#233552">
+
+      <div class="grid3">
+        <label>wCANDLE <input id="cfg_wCANDLE" type="number" step="0.1" min="0" max="5" value="1.0"></label>
+        <label>wMACD   <input id="cfg_wMACD"   type="number" step="0.1" min="0" max="5" value="1.0"></label>
+        <label>wRSI    <input id="cfg_wRSI"    type="number" step="0.1" min="0" max="5" value="0.8"></label>
+        <label>wDIV    <input id="cfg_wDIV"    type="number" step="0.1" min="0" max="5" value="1.2"></label>
+        <label>wBOS    <input id="cfg_wBOS"    type="number" step="0.1" min="0" max="5" value="1.0"></label>
+        <label>wVOL    <input id="cfg_wVOL"    type="number" step="0.1" min="0" max="5" value="0.5"></label>
+        <label>wBB     <input id="cfg_wBB"     type="number" step="0.1" min="0" max="5" value="0.7"></label>
+        <label>wTDI    <input id="cfg_wTDI"    type="number" step="0.1" min="0" max="5" value="1.0"></label>
+        <label>wCHART  <input id="cfg_wCHART"  type="number" step="0.1" min="0" max="5" value="1.2"></label>
+        <label>wHA     <input id="cfg_wHA"     type="number" step="0.1" min="0" max="5" value="0.6"></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Advanced (performance)</legend>
+      <div class="row"><label>Compute throttle (ms):</label><input id="advThrottleMs" type="number" min="200" max="10000" step="50"></div>
+      <div class="row"><label>Min. closed bars (stable):</label><input id="advMinBars" type="number" min="100" max="1000" step="10"></div>
+      <div class="row"><label>Max FPS (price drawing):</label><input id="advMaxFps" type="number" min="1" max="60" step="1"></div>
+      <div class="tiny">Lower FPS/stronger throttle = less CPU.</div>
+    </fieldset>
+
+    <small class="muted">“Save + apply now” → dedup, ≤4 default pair, bezár mindent és pontosan ezeket nyitja újra a kiválasztott TF-ekkel.</small>
+    <div class="btns">
+	  <button id="factoryReset" class="btn danger">Factory reset (clear LS + reload)</button>
+      <button id="btnSaveDefaults">Save</button>
+      <button id="btnApplyDefaults">Save + apply now</button>
+      <button id="btnCloseSettings">Close</button>
+    </div>
+  </div>
+
+  <div id="help" class="drawer" aria-label="Help">
+    <h2>User Guide</h2>
+<h3>What is this?</h3>
+<p>
+  <b>Pattern Scanner – Live (Binance)</b> helps you spot trade-friendly conditions across multiple timeframes for up to four symbols at once. Each <i>card</i> shows a live price, a simple <b>Consensus</b> (how many rows lean BUY vs SELL), and per-timeframe rows with trend state, key signals, and a clear <b>Entry</b> suggestion: <span class="badge bull">ENTRY</span>,
+  <span class="badge neutral">ARM</span>, or <span class="badge bear">NO ENTRY</span>.
+</p>
+
+<hr>
+
+<h3>Quick start</h3>
+<ol>
+  <li>Type symbols (comma/space separated), e.g. <code>BTCUSDC, ETHUSDC</code>, tick the timeframes you want, then click <b>Add / Extend</b>. (Max <b>4</b> cards.)</li>
+  <li>Use <b>Refresh</b> to fetch fresh candles and recompute all rows. <!-- :contentReference[oaicite:3]{index=3} --></li>
+  <li>Open <b>Settings</b> to save your defaults (pairs, timeframes, period). <i>Save + apply now</i> closes everything and reopens exactly those defaults.</li>
+</ol>
+
+<hr>
+
+<h3>How to read a card (30-second workflow)</h3>
+<ol>
+  <li><b>Consensus (header)</b>: many BUYs or many SELLs = clearer direction. Mixed = be patient or drop to fewer timeframes.</li>
+  <li><b>Entry (per row)</b>:
+    <ul>
+      <li><span class="badge bull">ENTRY LONG/SHORT</span> — conditions met <i>now</i>.</li>
+      <li><span class="badge neutral">ARM</span> — “armed” idea; it becomes ENTRY only if the next bar confirms.</li>
+      <li><span class="badge bear">NO ENTRY</span> — skip for now.</li>
+    </ul>
+    Align 2–3 timeframes in the <i>same direction</i> before acting.
+  </li>
+  <li><b>State</b>: quick context — trend vs EMA200 (above = bullish bias, below = bearish), EMA50 slope (↗/↘/→), and ATR% (volatility).</li>
+  <li><b>Patterns</b>: top signals summarized (e.g., EMA stack, MACD cross, RSI 30/70 exit, divergences, BOS, BB squeeze, etc.). Hover tooltips explain the “why”.</li>
+</ol>
+
+<hr>
+
+<h3>What the signals mean (plain English)</h3>
+<ul>
+  <li><b>Trend & EMA stack</b>: a clean 7&gt;20&gt;50&gt;200 stack with price above it supports uptrend (mirror for downtrend).</li>
+  <li><b>MACD</b>: bull/bear cross confirms or warns the trend turn.</li>
+  <li><b>RSI</b>: back above 30 = recovering from oversold; back below 70 = cooling from overbought.</li>
+  <li><b>Divergences</b>: price makes a new high but momentum doesn’t (or vice versa) → move is weakening; be selective.</li>
+  <li><b>BOS (Break of Structure)</b>: closing above a recent swing high (or below a swing low) = momentum follow-through.</li>
+  <li><b>BB Squeeze / Break</b>: tight bands often precede a move; close outside bands hints at expansion.</li>
+  <li><b>Volume spike</b>: unusual activity; treat as context, not a signal by itself.</li>
+</ul>
+
+<hr>
+
+<h3>Entry logic (simple)</h3>
+<ul>
+  <li>The app scores signals on each timeframe. If bullish points &ge; threshold (and filters pass) → <b>ENTRY LONG</b>. If bearish → <b>ENTRY SHORT</b>. Else <b>NO ENTRY</b>.</li>
+  <li><b>ARM</b> mode (optional): shows a “ready” state; it flips to ENTRY only if the <i>next bar</i> confirms by breaking the prior high/low in the right direction.</li>
+  <li><b>Tip:</b> Prefer entries that agree across multiple timeframes, not just one row.</li>
+</ul>
+
+<hr>
+
+<h3>Presets & simple setups</h3>
+<ul>
+  <li><b>Balanced</b> — general purpose, moderate filters.</li>
+  <li><b>Trend</b> — stricter; favors moves aligned with the higher timeframe.</li>
+  <li><b>Mean-rev</b> — lighter trend filters; looks for bounce/mean reversion.</li>
+  <li><b>Scalp</b> — faster decisions on lower TFs.</li>
+  <li><b>Swing</b> — slower, cleaner signals on higher TFs.</li>
+</ul>
+<p><b>Per-TF mapping:</b> you can assign a preset per timeframe (e.g., Scalp for 1m–5m, Balanced for 15m–1h, Swing for 4h–1d). This keeps each row tuned to its natural behavior.</p>
+
+<hr>
+
+<h3>Filters that keep you out of trouble</h3>
+<ul>
+  <li><b>HTF gates</b> (Higher Timeframe): only allow longs when the higher TF also trends up (price &amp; EMA50 above EMA200), and vice versa for shorts. You can enable one or two HTF gates.</li>
+  <li><b>Adaptive ATR</b>: in quiet markets (low ATR%) the app can relax thresholds a bit; in volatile markets (high ATR%) it tightens them. This avoids chasing noise or over-trading chop.</li>
+  <li><b>Confirm next bar</b>: adds patience. Armed now; enters only if the next candle proves it.</li>
+</ul>
+
+<hr>
+
+<h3>Good practices</h3>
+<ul>
+  <li><b>Start with 3–4 TFs</b> (e.g., 15m, 1h, 4h, 1d). Too many rows = noise; too few = tunnel vision.</li>
+  <li><b>Look for agreement</b>: 2–3 rows aligned (ENTRY/ARM same way) + healthy trend state is stronger than a lone signal.</li>
+  <li><b>Use Refresh</b> after opening cards or changing presets to make sure everything is up-to-date.</li>
+  <li><b>Performance</b> issues? In <b>Settings → Advanced</b> lower Max FPS / increase throttle, or reduce the number of timeframes.</li>
+</ul>
+
+<hr>
+
+<h3>Two quick examples</h3>
+<ul>
+  <li><b>Long bias</b>: On 1h and 4h, price above EMA200, EMA50 ↗, MACD bull cross, and Patterns show “Strong EMA stack”. Entry = <i>ENTRY LONG</i> on 1h and <i>ARM LONG</i> on 4h → green light (scale risk to volatility).</li>
+  <li><b>Short bias</b>: On 15m and 1h, price below EMA200, EMA50 ↘, RSI just fell back under 70, BOS down printed. Entry = <i>ENTRY SHORT</i> on 15m, <i>NO ENTRY</i> on 1h → wait for 1h to ARM/ENTRY or size smaller.</li>
+</ul>
+
+<hr>
+
+<h3>Settings you’ll actually use</h3>
+<ul>
+  <li><b>Default cards</b>: save your favorite symbols, TFs, and period so they load on start. <i>Save + apply now</i> instantly reloads them.</li>
+  <li><b>Presets bar</b>: one-click profiles (Balanced/Trend/Mean-rev/Scalp/Swing…) to quickly adapt to market mood.</li>
+  <li><b>Factory reset</b>: clears local settings if you want a clean slate.</li>
+</ul>
+
+<hr>
+
+<h3>Troubleshooting</h3>
+<ul>
+  <li><b>“Backfill…”</b> stays for a bit after adding cards — that’s normal. It turns <b>Live</b> when history and live data sync.</li>
+  <li><b>No ENTRYs?</b> Try a lighter preset (Mean-rev/Scalp), disable a HTF gate, or wait for alignment.</li>
+  <li><b>Too noisy?</b> Use Trend/Balanced, enable Confirm next bar, or raise the min score slightly.</li>
+  <li><b>Hit the 4-card limit?</b> Close one card to add another.</li>
+</ul>
+
+    <div class="btns"><button id="btnCloseHelp">Close</button></div>
+  </div>
+  
+  <script>
+(() => {
+  // ---------------------------- DOM HELPERS ---------------------------- //
+  const $ = s => document.querySelector(s);
+  const el = id => document.getElementById(id);
+
+  // Main controls
+  const cards = el('cards');
+  const symInput = el('symInput');
+  const addBtn = el('addBtn');
+  const refreshBtn = el('refreshBtn');
+  const statusEl = el('status');
+  const periodInput = el('period');
+
+  // Drawers
+  const settings = el('settings');
+  const btnSettings = el('btnSettings');
+  const btnSaveDefaults = el('btnSaveDefaults');
+  const btnApplyDefaults = el('btnApplyDefaults');
+  const btnCloseSettings = el('btnCloseSettings');
+
+  const helpDrawer = el('help');
+  const btnHelp = el('btnHelp');
+  const btnCloseHelp = el('btnCloseHelp');
+
+  // Settings fields
+  const defPairsEl = el('defPairs');
+  const defIntervalsWrap = el('defIntervals');
+  const defPeriodEl = el('defPeriod');
+  const advThrottleMsEl = el('advThrottleMs');
+  const advMinBarsEl = el('advMinBars');
+  const advMaxFpsEl = el('advMaxFps');
+
+  // Extra config fields (mapping)
+  const tfPresetGrid = el('tfPresetGrid');
+
+  // HTF & adaptive fields
+  const cfg_useHTF = el('cfg_useHTF');
+  const cfg_htfRatio = el('cfg_htfRatio');
+  const cfg_requireHTFSlope = el('cfg_requireHTFSlope');
+  const cfg_useHTF2 = el('cfg_useHTF2');
+  const cfg_htfRatio2 = el('cfg_htfRatio2');
+  const cfg_requireHTFSlope2 = el('cfg_requireHTFSlope2');
+
+  const cfg_atrLowPct = el('cfg_atrLowPct');
+  const cfg_atrHighPct = el('cfg_atrHighPct');
+  const cfg_confirmNext = el('cfg_confirmNext');
+  const cfg_adaptMinLow = el('cfg_adaptMinLow');
+  const cfg_adaptMinHigh = el('cfg_adaptMinHigh');
+  const cfg_adaptAtrLow = el('cfg_adaptAtrLow');
+  const cfg_adaptAtrHigh = el('cfg_adaptAtrHigh');
+
+  // Pattern config elements
+  const CFG_IDS = [
+    'enCandle','enMACD','enRSI','enDiv','enHiddenDiv','enBOS','enVol','enBB','enTDI','enChart','enHA',
+    'minSignalScore','atrMult','dojiBodyPct','soldierMinBodyPct','volMult','bbLen','bbK','bbSqueezePct',
+    'tdiRsiLen','tdiSignalLen','tdiBbLen','tdiBbK',
+    'pivotLeft','pivotRight','chartLookback','dblTolPct',
+    'wCANDLE','wMACD','wRSI','wDIV','wBOS','wVOL','wBB','wTDI','wCHART','wHA'
+  ];
+  const cfgEls = {}; for (const k of CFG_IDS){ cfgEls[k]=el('cfg_'+k); }
+
+  // ---------------------------- CONSTANTS / STORAGE ----------------------------
+  const ALL_INTS = ['1m','3m','5m','15m','30m','1h','2h','4h','1d'];
+  const DEFAULT_PAIRS = ['BTCUSDC','ETHUSDC','BNBUSDC','SOLUSDC'];
+  const DEFAULT_INTS  = ['5m','15m','1h','4h','1d'];
+
+  const LS_STATE   = 'mtf_pattern_state_pro_norisk_v1';
+  const LS_DEF_PS  = 'mtf_pattern_def_pairs_pro_norisk';
+  const LS_DEF_IV  = 'mtf_pattern_def_intervals_pro_norisk';
+  const LS_DEF_PER = 'mtf_pattern_def_period_pro_norisk';
+  const LS_ADV     = 'mtf_pattern_adv_pro_norisk_v1';
+  const LS_TA      = 'mtf_pattern_ta_cache_pro_norisk_v1';
+  const LS_CFG     = 'mtf_pattern_cfg_pro_norisk_v1';
+  const LS_TFPMAP  = 'mtf_pattern_tf_preset_map_norisk_v1';
+
+  // Default TF
+  const PRESET_NAMES = ['balanced','trend','meanrev','aggr','cons','scalp','swing'];
+  const DEFAULT_TF_MAP = {
+    '1m':'scalp','3m':'scalp','5m':'scalp',
+    '15m':'balanced','30m':'balanced','1h':'trend',
+    '2h':'trend','4h':'swing','1d':'swing'
+  };
+
+  // Base defaults
+  const DEFAULT_CFG = {
+    enCandle:true,enMACD:true,enRSI:true,enDiv:true,enHiddenDiv:true,enBOS:true,enVol:true,enBB:true,enTDI:true,enChart:true,enHA:false,
+    minSignalScore:0.8, atrMult:0.3, dojiBodyPct:0.10, soldierMinBodyPct:0.55, volMult:1.6,
+    bbLen:20, bbK:2.0, bbSqueezePct:4.0,
+    tdiRsiLen:14, tdiSignalLen:7, tdiBbLen:34, tdiBbK:1.618,
+    pivotLeft:3, pivotRight:3, chartLookback:120, dblTolPct:0.30,
+    // HTF gates (base)
+    useHTF:true, htfRatio:4, requireHTFSlope:true,
+    useHTF2:false, htfRatio2:12, requireHTFSlope2:false,
+    // Adaptive ATR regime
+    atrLowPct:0.60, atrHighPct:2.50, confirmNext:false,
+    adaptMinLow:-0.10, adaptMinHigh:+0.20, adaptAtrLow:0.85, adaptAtrHigh:1.15,
+    // Weights
+    wCANDLE:1.0, wMACD:1.0, wRSI:0.8, wDIV:1.2, wBOS:1.0, wVOL:0.5, wBB:0.7, wTDI:1.0, wCHART:1.2, wHA:0.6
+  };
+  const DEFAULT_ADV = { throttleMs:1500, minBars:350, maxFps:12 };
+
+  // ---------------------------- HELPERS ---------------------------- //
+  const tfMs = (t)=>{ const n=parseInt(t,10); if(!Number.isFinite(n)) return 0;
+    if (t.endsWith('m')) return n*60000; if (t.endsWith('h')) return n*3600000; if (t.endsWith('d')) return n*86400000; return 0; };
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  const htime = ms => new Date(ms).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const status = (txt)=>{ statusEl && (statusEl.textContent=txt); };
+
+  function loadDefaultPairs(){ try{const j=JSON.parse(localStorage.getItem(LS_DEF_PS)||'null'); if(Array.isArray(j)&&j.length) return j.map(x=>String(x).toUpperCase());}catch{} return DEFAULT_PAIRS.slice();}
+  function loadDefaultIntervals(){ try{const j=JSON.parse(localStorage.getItem(LS_DEF_IV)||'null'); const arr=Array.isArray(j)&&j.length?j:DEFAULT_INTS; return arr.filter(v=>ALL_INTS.includes(v)); }catch{} return DEFAULT_INTS.slice();}
+  function loadDefaultPeriod(){ const p=parseInt(localStorage.getItem(LS_DEF_PER)||'30',10); return Number.isFinite(p)?Math.max(5,Math.min(600,p)):30; }
+  function loadAdv(){
+    try{
+      const j=JSON.parse(localStorage.getItem(LS_ADV)||'null')||DEFAULT_ADV;
+      return {
+        throttleMs: Math.max(200, Math.min(10000, Number(j.throttleMs)||DEFAULT_ADV.throttleMs)),
+        minBars:    Math.max(100, Math.min(1000,  Number(j.minBars)||DEFAULT_ADV.minBars)),
+        maxFps:     Math.max(1,   Math.min(60,    Number(j.maxFps)||DEFAULT_ADV.maxFps)),
+      };
+    }catch{
+      return { ...DEFAULT_ADV };
+    }
+  }
+
+  function loadCfg(){
+    try{
+      const j = JSON.parse(localStorage.getItem(LS_CFG) || 'null') || DEFAULT_CFG;
+      return { ...DEFAULT_CFG, ...j };
+    }catch{
+      return { ...DEFAULT_CFG };
+    }
+  }
+
+
+  function saveCfg(cfg){ try{ localStorage.setItem(LS_CFG, JSON.stringify(cfg)); }catch{} }
+
+  function loadTfMap(){ try{
+      const j=JSON.parse(localStorage.getItem(LS_TFPMAP)||'null');
+      if (!j || typeof j!=='object') return {...DEFAULT_TF_MAP};
+      const out={...DEFAULT_TF_MAP}; for (const k of ALL_INTS){ if (j[k] && PRESET_NAMES.includes(j[k])) out[k]=j[k]; }
+      return out;
+    }catch{ return {...DEFAULT_TF_MAP}; } }
+  function saveTfMap(map){ try{ localStorage.setItem(LS_TFPMAP, JSON.stringify(map)); }catch{} }
+
+  const defaults = {
+    list: loadDefaultPairs().slice(0,4).map(sym=>({sym, intervals: loadDefaultIntervals()})),
+    period: loadDefaultPeriod(),
+    auto: true
+  };
+  const state = loadState();
+  function loadState(){
+    try{
+      const j=JSON.parse(localStorage.getItem(LS_STATE)||'null');
+      const base={...defaults, cfg: loadCfg(), tfMap: loadTfMap()};
+      if(!j) return base;
+      const list = Array.isArray(j.list)? j.list : defaults.list;
+      const norm = list.map(x=>({sym:String(x.sym||'').toUpperCase(), intervals:(Array.isArray(x.intervals)?x.intervals:[]).filter(v=>ALL_INTS.includes(v))}))
+                       .filter(x=>/^[A-Z0-9]{6,}$/.test(x.sym)).slice(0,4);
+      return { list: norm.length?norm:defaults.list, period: Math.max(5,Math.min(600, Number(j.period)||defaults.period)), auto:true, cfg: loadCfg(), tfMap: loadTfMap() };
+    }catch{ return {...defaults, cfg: loadCfg(), tfMap: loadTfMap()}; }
+  }
+  function saveState(){ try{ localStorage.setItem(LS_STATE, JSON.stringify({list:state.list, period:state.period, auto:state.auto})); }catch{} }
+
+  let { throttleMs:COMPUTE_THROTTLE_MS, minBars:MIN_BARS_FOR_STABLE, maxFps:MAX_FPS } = loadAdv();
+
+  function loadTaCache(){ try{ return JSON.parse(localStorage.getItem(LS_TA)||'{}'); }catch{ return {}; } }
+  const taCache = loadTaCache();
+  const taKey = (sym,iv)=>`${sym}__${iv}`;
+  function saveTa(sym,iv,rec){ taCache[taKey(sym,iv)] = rec; try{ localStorage.setItem(LS_TA, JSON.stringify(taCache)); }catch{} }
+
+  // ---------------------------- EXCHANGE INFO (tickSize) ---------------------------- //
+  async function fetchExchangeInfo(sym){
+    try{
+      const r=await fetch(`https://api.binance.com/api/v3/exchangeInfo?symbol=${encodeURIComponent(sym)}`,{cache:'force-cache'});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json(); const s=(j.symbols&&j.symbols[0])||null; if(!s) return null;
+      const pf=(s.filters||[]).find(f=>f.filterType==='PRICE_FILTER');
+      const ts=pf?.tickSize || '0.00000001';
+      const dec = ts.includes('.') ? ts.replace(/0+$/,'').split('.')[1].length : 0;
+      return { tickDecimals: dec };
+    }catch{ return null; }
+  }
+  function fmtPx(sym, n){
+    const d = symData.get(sym);
+    const dec = d?.meta?.tickDecimals ?? 6;
+    return Number.isFinite(n) ? n.toFixed(Math.min(10,Math.max(0,dec))) : '—';
+  }
+  const fmtN=(n,d=6)=>Number.isFinite(n)?(Math.abs(n)>=1?n.toFixed(Math.min(8,d)):n.toPrecision(6)).replace(/\.?0+$/,''):'—';
+
+  // ---------------------------- TA UTILS ---------------------------- //
+  function SMA(arr, len, idx){ if(idx+1 < len) return null; let s=0; for(let i=idx-len+1;i<=idx;i++) s+=arr[i]||0; return s/len; }
+  function EMA(arr, len){ const k=2/(len+1), out=Array(arr.length).fill(null); let seed=0;
+    for(let i=0;i<arr.length;i++){ const v=arr[i]; if(i<len-1){ seed+=v; } else if(i===len-1){ seed+=v; out[i]=seed/len; } else { out[i]= v*k + out[i-1]*(1-k); } }
+    return out;
+  }
+  function RSI_Wilder(c, len=14){ const r=Array(c.length).fill(null); let ag=0,al=0;
+    for(let i=1;i<c.length;i++){ const ch=c[i]-c[i-1]; const g=ch>0?ch:0, l=ch<0?-ch:0;
+      if(i<=len){ ag+=g; al+=l; if(i===len){ const rs=(al/len===0)?1e9:(ag/len)/(al/len); r[i]=100-(100/(1+rs)); } }
+      else { ag=(ag*(len-1)+g)/len; al=(al*(len-1)+l)/len; const rs=(al===0)?1e9:ag/al; r[i]=100-(100/(1+rs)); }
+    } return r;
+  }
+  function MACD_EMA(cl,f=12,s=26,sig=9){ const ef=EMA(cl,f), es=EMA(cl,s);
+    const dif=cl.map((_,i)=>(ef[i]==null||es[i]==null)?null:ef[i]-es[i]);
+    const seed=dif.map(v=>v==null?null:v); const first=seed.findIndex(v=>v!=null); let dea=Array(dif.length).fill(null);
+    if(first>=0){ const slice=seed.slice(first).map(v=>v??0); const emaSig=EMA(slice,sig); for(let i=0;i<emaSig.length;i++){ dea[first+i]=(seed[first+i]==null)?null:emaSig[i]; } }
+    const hist=dif.map((v,i)=>(v==null||dea[i]==null)?null:(v-dea[i])); return {dif,dea,hist};
+  }
+  function TR(o,h,l,c){ const out=Array(c.length).fill(null); for(let i=0;i<c.length;i++){ if(i===0) out[i]=h[i]-l[i]; else out[i]=Math.max(h[i]-l[i], Math.abs(h[i]-c[i-1]), Math.abs(l[i]-c[i-1])); } return out; }
+  function ATR(o,h,l,c,len=14){ const tr=TR(o,h,l,c); const out=Array(c.length).fill(null); let seed=0; for(let i=0;i<tr.length;i++){ const v=tr[i]; if(i<len){ seed+=v; if(i===len-1) out[i]=seed/len; } else { out[i]=(out[i-1]*(len-1)+v)/len; } } return out; }
+  function BB(arr,len,k){ const mid=Array(arr.length).fill(null), up=Array(arr.length).fill(null), lo=Array(arr.length).fill(null);
+    for(let i=0;i<arr.length;i++){ const m=SMA(arr,len,i); if(m==null){ mid[i]=up[i]=lo[i]=null; continue; }
+      let s2=0; for(let j=i-len+1;j<=i;j++){ const dv=(arr[j]-m); s2+=dv*dv; } const st=Math.sqrt(s2/len); mid[i]=m; up[i]=m+k*st; lo[i]=m-k*st; }
+    return {mid,up,lo};
+  }
+  function TDI(closeArr, cfg){ const r=RSI_Wilder(closeArr, cfg.tdiRsiLen); const sig=EMA(r.map(x=>x??0), cfg.tdiSignalLen).map((v,i)=>(r[i]==null?null:v)); const bbR=BB(r.map(x=>x??0), cfg.tdiBbLen, cfg.tdiBbK);
+    for(let i=0;i<r.length;i++){ if(r[i]==null){ sig[i]=null; bbR.mid[i]=bbR.up[i]=bbR.lo[i]=null; } } return {rsi:r, signal:sig, bb:bbR};
+  }
+  function heikinAshiSeries(o,h,l,c){ const ho=[],hh=[],hl=[],hc=[]; for(let i=0;i<c.length;i++){ const close=(o[i]+h[i]+l[i]+c[i])/4; const open=i?(ho[i-1]+hc[i-1])/2:(o[0]+c[0])/2; const high=Math.max(h[i],open,close); const low=Math.min(l[i],open,close); ho.push(open); hh.push(high); hl.push(low); hc.push(close); } return {ho,hh,hl,hc}; }
+  function linRegXY(xs,ys){ const n=xs.length; if(n<2) return {m:0,b:ys[ys.length-1]||0}; let sx=0,sy=0,sxy=0,sxx=0; for(let i=0;i<n;i++){ const x=xs[i],y=ys[i]; sx+=x; sy+=y; sxy+=x*y; sxx+=x*x; } const denom=n*sxx-sx*sx; const m=denom!==0?(n*sxy - sx*sy)/denom:0; const b=(sy - m*sx)/n; return {m,b}; }
+  const linVal=(lr,x)=>lr.m*x+lr.b;
+
+  // ---------------------------- REST KLINES ---------------------------- //
+  async function fetchKlines(sym, interval, limit=1000, endTime=null, signal){
+    let url = `https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(sym)}&interval=${interval}&limit=${limit}`;
+    if (endTime != null) url += `&endTime=${endTime}`;
+    const r = await fetch(url, { cache:'no-store', signal });
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    const k = await r.json();
+    return k.map(a=>({ open:+a[1], high:+a[2], low:+a[3], close:+a[4],volume:+a[5], tsStart:+a[0], tsEnd:+a[6], final:true }));
+  }
+
+
+
+  // ---------------------------- WS ---------------------------- //
+  const wsHub = (()=>{
+    const BASES=['wss://stream.binance.com:9443/stream','wss://data-stream.binance.vision/stream'];
+    let host=0, ws=null, connected=false, backoff=2000, sendQ=[];
+    const want=new Set();
+    const listeners=new Map();
+    const bySymbol=new Map();
+    const MAX_BACK=30000;
+
+    function url(){ return BASES[host%BASES.length]; }
+    function ensureOpen(){
+      if (ws && (ws.readyState===WebSocket.OPEN || ws.readyState===WebSocket.CONNECTING)) return;
+      try{ ws && ws.close(); }catch{}
+      ws=new WebSocket(url());
+      ws.onopen=()=>{
+        connected=true;
+        for(const m of sendQ){ try{ ws.send(JSON.stringify(m)); }catch{} }
+        sendQ.length=0;
+		if (want.size){
+ 		 try{
+  		  ws.send(JSON.stringify({
+  		    method:'SUBSCRIBE',
+    		  params: Array.from(want),
+   		   id: Date.now()
+  		  }));
+ 		 }catch{}
+		}
+
+        backoff=2000; status('WS connected');
+      };
+      ws.onclose=()=>{
+        connected=false; status('WS reconnecting…');
+        host=(host+1)%BASES.length;
+        setTimeout(ensureOpen, backoff+Math.floor(Math.random()*700));
+        backoff=Math.min(Math.round(backoff*1.7), MAX_BACK);
+      };
+      ws.onerror=()=>{};
+	  
+	  ws.onmessage = (ev)=>{
+	    let raw; try{ raw = JSON.parse(ev.data); }catch{ return; }
+	    if (Object.prototype.hasOwnProperty.call(raw,'result')) return;
+ 	   const stream = raw.stream || '';
+ 	   const data   = raw.data   || raw;
+ 	   const key = String(stream).toLowerCase();
+ 	   const set = listeners.get(key); if(!set||!set.size) return;
+ 	   for (const fn of set){ try{ fn(data); }catch{} }
+	  };
+
+    }
+    function send(msg){
+      if (connected && ws && ws.readyState===WebSocket.OPEN){
+        try{ ws.send(JSON.stringify(msg)); }catch{ sendQ.push(msg); }
+      } else { sendQ.push(msg); ensureOpen(); }
+    }
+    function subscribe(sym, subKey, handler){
+      const key=`${sym.toLowerCase()}@${subKey.toLowerCase()}`;
+      if(!listeners.has(key)) listeners.set(key,new Set());
+      listeners.get(key).add(handler);
+      if(!want.has(key)){ want.add(key); if(connected) send({method:'SUBSCRIBE',params:[key],id:Date.now()}); else ensureOpen(); }
+      const SYM=sym.toUpperCase();
+      if(!bySymbol.has(SYM)) bySymbol.set(SYM,new Set());
+      bySymbol.get(SYM).add(key);
+    }
+    function unsubscribe(sym, subKey=null, handler=null){
+      const SYM=sym.toUpperCase(); const keys=bySymbol.get(SYM)||new Set();
+      const targets=subKey?new Set([`${sym.toLowerCase()}@${subKey.toLowerCase()}`]):new Set(keys);
+      for(const key of targets){
+        if(handler && listeners.has(key)) listeners.get(key).delete(handler);
+        if(listeners.has(key) && (!handler || listeners.get(key).size===0)){
+          listeners.delete(key);
+          if (want.has(key)){ want.delete(key); if(connected) send({method:'UNSUBSCRIBE',params:[key],id:Date.now()}); }
+        }
+        keys.delete(key);
+      }
+      if(!subKey) bySymbol.delete(SYM);
+    }
+    return { ensureOpen, subscribe, unsubscribe };
+  })();
+
+  // ---------------------------- PER-SYMBOL RUNTIME ---------------------------- //
+  const symData=new Map();
+  function ensureSym(sym){
+    if(!symData.has(sym)){
+      symData.set(sym,{ meta:null, lastPrice:null, lastTs:null, kCache:new Map(), lastCalcTs:new Map(), raf:false, pricePaintTs:0 });
+      fetchExchangeInfo(sym).then(meta=>{ const d=symData.get(sym); if(d&&meta) d.meta=meta; });
+    }
+    return symData.get(sym);
+  }
+
+  // ---------------------------- UI: CARDS ---------------------------- //
+  function idsFor(sym){
+    const U=sym.toUpperCase();
+    return { card:`card_${U}`, price:`price_${U}`, sum:`sum_${U}`, status:`status_${U}`, tbody:`tbody_${U}` };
+  }
+  function ensureCard(sym){
+    const ids=idsFor(sym); let card=document.getElementById(ids.card);
+    if(!card){
+      card=document.createElement('div'); card.className='card'; card.id=ids.card;
+      card.innerHTML=`
+        <div class="head">
+          <span class="pill">${sym}</span>
+          <span class="muted" id="${ids.sum}">Consensus: —</span>
+          <span class="grow"></span>
+          <span>Price: <span class="price" id="${ids.price}">—</span></span>
+          <button class="close" title="Close card">❌</button>
+        </div>
+        <div class="head-status"><span class="status" id="${ids.status}">Connecting…</span></div>
+        <div style="overflow:auto">
+          <table>
+            <thead>
+              <tr>
+                <th>Timeframe</th>
+                <th>State</th>
+                <th>Entry</th>
+                <th>MACD (DIF / DEA / MACD)</th>
+                <th>Patterns</th>
+                <th class="right">Bull / Bear (weighted)</th>
+                <th class="right">Last</th>
+                <th class="right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="${ids.tbody}"></tbody>
+          </table>
+        </div>`;
+      card.querySelector('.close').addEventListener('click', ()=> removeCard(sym));
+      cards.appendChild(card);
+    }
+    return card;
+  }
+  function setStatus(sym,txt){ const ids=idsFor(sym); const e=el(ids.status); if(e) e.textContent=txt; }
+  function setHeadPrice(sym, n){ const ids=idsFor(sym); const e=el(ids.price); if(e) e.textContent=n; }
+  
+  function updateConsensus(sym){
+    const ids = idsFor(sym);
+    const body = el(ids.tbody);
+    if (!body) return;
+
+    let buy=0, sell=0, total=0;
+    body.querySelectorAll('tr').forEach(tr=>{
+      total++;
+      const sig = tr.dataset.signal || 'NEUTRAL';
+      const w   = Number.parseFloat(tr.dataset.weight || '0') || 0;
+      if (sig === 'BUY')  buy  += w;
+      if (sig === 'SELL') sell += w;
+    });
+
+    const fmt = (x)=> (Math.abs(x - Math.round(x)) < 0.001 ? String(Math.round(x)) : x.toFixed(1));
+    const s = el(ids.sum);
+    if (s){
+      s.innerHTML =
+        `Consensus: <span class="badge bull">BUY ${fmt(buy)}</span> / `+
+        `<span class="badge bear">SELL ${fmt(sell)}</span> `+
+        `<span class="muted">(total: ${total})</span>`;
+    }
+  }
+
+
+  function upsertRow(sym, interval){
+    ensureCard(sym);
+    const body=el(idsFor(sym).tbody);
+    const key=`${sym}__${interval}`;
+    let tr=body.querySelector(`tr[data-key="${key}"]`);
+    if(!tr){
+      tr=document.createElement('tr'); tr.dataset.key=key; tr.dataset.signal='NEUTRAL';
+      tr.innerHTML=`
+        <td><span class="badge neutral">${interval}</span></td>
+        <td class="state">—</td>
+        <td class="entry">—</td>
+        <td class="macd">—</td>
+        <td class="patterns">—</td>
+        <td class="score right">—</td>
+        <td class="ts right muted">—</td>
+        <td class="right"><button class="rm">Remove</button></td>`;
+      tr.querySelector('.rm').addEventListener('click', ()=>{
+        const item=state.list.find(x=>x.sym===sym);
+        if(item){
+          item.intervals=item.intervals.filter(iv=>iv!==interval);
+          if(!item.intervals.length) removeCard(sym); else saveState();
+        }
+        tr.remove(); updateConsensus(sym);
+      });
+      body.appendChild(tr);
+      const cached=taCache[taKey(sym, interval)];
+      if (cached){ renderRow(sym, interval, cached); }
+    }
+    return tr;
+  }
+  function removeCard(sym){
+    wsHub.unsubscribe(sym);
+    state.list = state.list.filter(x=>x.sym!==sym);
+    saveState();
+    const c=document.getElementById(idsFor(sym).card); if(c) c.remove();
+    symData.delete(sym);
+  }
+
+  // ---------------------------- PRESETS ---------------------------- //
+  function presetOverrides(name){
+    switch(name){
+      case 'balanced': return {
+        minSignalScore:0.9, confirmNext:true, useHTF:true, htfRatio:8, requireHTFSlope:true,
+        volMult:1.8, dojiBodyPct:0.15, bbSqueezePct:5.0,
+        wCANDLE:1.15, wMACD:1.10, wRSI:1.00, wDIV:1.00, wBOS:1.10, wVOL:0.80, wBB:0.90, wTDI:1.00, wCHART:1.05, wHA:0.80
+      };
+      case 'trend': return {
+        minSignalScore:1.1, confirmNext:true, useHTF:true, htfRatio:12, requireHTFSlope:true,
+        volMult:2.0, dojiBodyPct:0.12, bbSqueezePct:6.0,
+        wCANDLE:1.30, wMACD:1.15, wRSI:0.9, wDIV:0.9, wBOS:1.30, wVOL:0.6, wBB:0.8, wTDI:0.9, wCHART:1.20, wHA:1.10
+      };
+      case 'meanrev': return {
+        minSignalScore:0.7, confirmNext:false, useHTF:false, htfRatio:6, requireHTFSlope:false,
+        volMult:1.4, dojiBodyPct:0.22, bbSqueezePct:3.5,
+        wCANDLE:0.9, wMACD:0.9, wRSI:1.2, wDIV:1.3, wBOS:0.8, wVOL:0.7, wBB:1.3, wTDI:1.2, wCHART:0.9, wHA:0.7
+      };
+      case 'aggr': return {
+        minSignalScore:0.6, confirmNext:false, useHTF:false,
+        volMult:1.2, dojiBodyPct:0.25,
+        wCANDLE:1.1, wMACD:1.1, wRSI:1.1, wDIV:1.0, wBOS:1.0, wVOL:0.6, wBB:0.9, wTDI:1.1, wCHART:1.0, wHA:0.9
+      };
+      case 'cons': return {
+        minSignalScore:1.25, confirmNext:true, useHTF:true, htfRatio:12, requireHTFSlope:true,
+        volMult:2.2, dojiBodyPct:0.10, bbSqueezePct:6.5,
+        wCANDLE:1.1, wMACD:1.0, wRSI:0.9, wDIV:1.1, wBOS:1.25, wVOL:0.5, wBB:0.8, wTDI:0.9, wCHART:1.15, wHA:1.0
+      };
+      case 'scalp': return {
+        minSignalScore:0.8, confirmNext:false, useHTF:true, htfRatio:4, requireHTFSlope:false,
+        atrMult:0.25, volMult:1.3, bbSqueezePct:3.8,
+        wCANDLE:1.1, wMACD:1.15, wRSI:1.15, wDIV:1.2, wBOS:1.0, wVOL:0.7, wBB:1.0, wTDI:1.2, wCHART:0.95, wHA:0.9
+      };
+      case 'swing': return {
+        minSignalScore:1.0, confirmNext:true, useHTF:true, htfRatio:12, requireHTFSlope:true,
+        atrMult:0.35, volMult:1.8, bbSqueezePct:6.0,
+        wCANDLE:1.15, wMACD:1.10, wRSI:0.9, wDIV:1.0, wBOS:1.25, wVOL:0.5, wBB:0.9, wTDI:0.9, wCHART:1.25, wHA:1.1
+      };
+      default: return {};
+    }
+  }
+
+  function effectiveCfgFor(tf){
+    const base = { ...state.cfg };
+    const name = (state.tfMap && state.tfMap[tf]) ? state.tfMap[tf] : DEFAULT_TF_MAP[tf] || 'balanced';
+    const ov = presetOverrides(name);
+    return { ...base, ...ov };
+  }
+
+
+
+  // ---------------------------- DETECTION ---------------------------- //
+  const CAT={ CANDLE:'CANDLE', MACD:'MACD', RSI:'RSI', DIV:'DIV', BOS:'BOS', VOL:'VOL', BB:'BB', TDI:'TDI', CHART:'CHART', HA:'HA' };
+
+  function detectWeighted(sym, interval, cfg, cache){
+    let bars = cache || (ensureSym(sym).kCache.get(interval) || []);
+    if (bars.length && bars.at(-1)?.final===false) bars = bars.slice(0,-1);
+    if (bars.length < 35) return { list:[], bull:0, bear:0, ctx:{} };
+
+    const o=bars.map(x=>x.open), h=bars.map(x=>x.high), l=bars.map(x=>x.low), c=bars.map(x=>x.close), v=bars.map(x=>x.volume??0);
+    const e7=EMA(c,7), e20=EMA(c,20), e50=EMA(c,50), e200=EMA(c,200);
+    const rsi=RSI_Wilder(c,14); const {dif,dea,hist}=MACD_EMA(c,12,26,9); const atr=ATR(o,h,l,c,14);
+    const i=c.length-1, price=c[i];
+
+    // ATR regime
+    const atrPct = (atr[i] && price) ? (atr[i]/price*100) : null;
+    let minScore = cfg.minSignalScore;
+    let atrMult  = cfg.atrMult;
+    if (atrPct!=null){
+      if (atrPct <= (cfg.atrLowPct)){
+        minScore = Math.max(0, minScore + (cfg.adaptMinLow||0));
+        atrMult  = Math.max(0, atrMult  * (cfg.adaptAtrLow||1));
+      } else if (atrPct >= (cfg.atrHighPct)){
+        minScore = Math.max(0, minScore + (cfg.adaptMinHigh||0));
+        atrMult  = Math.max(0, atrMult  * (cfg.adaptAtrHigh||1));
+      }
+    }
+
+    const out=[]; let bull=0, bear=0;
+    const add=(cat,dir,label,score,why,meta={})=>{
+      if (score < minScore) return;
+      const w = cfg['w'+cat] ?? 1;
+      const wscore = score*w;
+      out.push({cat,dir,label,score:wscore,rawScore:score,why,meta});
+      if(dir==='BULL') bull+=wscore; else if(dir==='BEAR') bear+=wscore;
+    };
+
+    // CANDLE / EMA stack, ATR breakout, Doji, Soldiers/Crows
+    if (cfg.enCandle){
+      const strongBullStack=(e7[i]>e20[i] && e20[i]>e50[i] && e50[i]>e200[i] && price>e7[i]);
+      const strongBearStack=(e7[i]<e20[i] && e20[i]<e50[i] && e50[i]<e200[i] && price<e7[i]);
+      if (strongBullStack) add('CANDLE','BULL','Strong EMA stack',3,'EMA7>20>50>200 & price>EMA7');
+      if (strongBearStack) add('CANDLE','BEAR','Strong EMA stack',3,'EMA7<20<50<200 & price<EMA7');
+
+      const atrNow=atr[i];
+      if (Number.isFinite(atrNow) && Number.isFinite(e200[i]) && Number.isFinite(e50[i])){
+        if (price>e200[i] && (price-e50[i])>=atrMult*atrNow) add('CANDLE','BULL','ATR breakout > EMA200',2,'dist ≥ k·ATR');
+        if (price<e200[i] && (e50[i]-price)>=atrMult*atrNow) add('CANDLE','BEAR','ATR spike < EMA200',2,'dist ≥ k·ATR');
+      }
+      const last=bars.at(-1), prev=bars.at(-2), prev2=bars.at(-3);
+      if (last && prev && prev2){
+        const bodyPct = (b)=>Math.abs(b.close-b.open)/((b.high-b.low)||1e-12);
+        const isBullBody = (b)=>b.close>b.open && bodyPct(b)>=cfg.soldierMinBodyPct;
+        const isBearBody = (b)=>b.close<b.open && bodyPct(b)>=cfg.soldierMinBodyPct;
+        if (isBullBody(prev2)&&isBullBody(prev)&&isBullBody(last) && prev2.close<prev.close && prev.close<last.close){
+          add('CANDLE','BULL','Three White Soldiers',2,'3 strong green bodies');
+        }
+        if (isBearBody(prev2)&&isBearBody(prev)&&isBearBody(last) && prev2.close>prev.close && prev.close>last.close){
+          add('CANDLE','BEAR','Three Black Crows',2,'3 strong red bodies');
+        }
+      }
+      const o1=last?.open, h1=last?.high, l1=last?.low, c1=last?.close;
+      if ([o1,h1,l1,c1].every(Number.isFinite)){
+        const body = Math.abs(c1-o1), range=(h1-l1)||1e-12;
+        const isDoji = (body/range) <= cfg.dojiBodyPct;
+        const upper = h1 - Math.max(c1,o1), lower = Math.min(c1,o1) - l1;
+        const dragonfly = isDoji && upper <= body*0.5 && lower > 2*body;
+        const gravestone= isDoji && lower <= body*0.5 && upper > 2*body;
+        if (dragonfly) add('CANDLE','BULL','Dragonfly Doji',1,'long lower wick');
+        else if (gravestone) add('CANDLE','BEAR','Gravestone Doji',1,'long upper wick');
+      }
+    }
+
+    // MACD
+    if (cfg.enMACD){
+      if (dif[i]>dea[i] && dif[i-1]<=dea[i-1]) add('MACD','BULL','MACD bull cross',2,'DIF>DEA');
+      if (dif[i]<dea[i] && dif[i-1]>=dea[i-1]) add('MACD','BEAR','MACD bear cross',2,'DIF<DEA');
+      if (hist[i]>0 && hist[i-1]<=0) add('MACD','BULL','Histogram > 0',1,'turned positive');
+      if (hist[i]<0 && hist[i-1]>=0) add('MACD','BEAR','Histogram < 0',1,'turned negative');
+    }
+
+    // RSI
+    if (cfg.enRSI){
+      if (rsi[i]<=30 && rsi[i-1]>30) add('RSI','BULL','RSI back above 30',1,'oversold → exit');
+      if (rsi[i]>=70 && rsi[i-1]<70) add('RSI','BEAR','RSI back below 70',1,'overbought → exit');
+    }
+
+    // Divergence & Hidden
+    if (cfg.enDiv || cfg.enHiddenDiv){
+      const piv=(arr,L=cfg.pivotLeft,R=cfg.pivotRight)=>{
+        const hi=[], lo=[];
+        for(let k=L;k<arr.length-R;k++){
+          let isHi=true,isLo=true;
+          for(let t=k-L;t<=k+R;t++){ if(arr[t]>arr[k]) isHi=false; if(arr[t]<arr[k]) isLo=false; if(!isHi&&!isLo) break; }
+          if(isHi) hi.push(k); if(isLo) lo.push(k);
+        } return {hi,lo};
+      };
+      const pvH=piv(h), pvL=piv(l);
+      const last2=A=>A.length>=2?A.slice(-2):[];
+      const [h1i,h2i]=last2(pvH.hi), [l1i,l2i]=last2(pvL.lo);
+      if (cfg.enDiv){
+        if (Number.isFinite(h2i)&&Number.isFinite(h1i)){
+          const priceHH = h[h1i] > h[h2i], rsiLH=rsi[h1i] < rsi[h2i], difLH=dif[h1i] < dif[h2i];
+          if (priceHH && (rsiLH||difLH)) add('DIV','BEAR','Bear divergence',2,'Price HH, RSI/DIF LH');
+        }
+        if (Number.isFinite(l2i)&&Number.isFinite(l1i)){
+          const priceLL = l[l1i] < l[l2i], rsiHL=rsi[l1i] > rsi[l2i], difHL=dif[l1i] > dif[l2i];
+          if (priceLL && (rsiHL||difHL)) add('DIV','BULL','Bull divergence',2,'Price LL, RSI/DIF HL');
+        }
+      }
+      if (cfg.enHiddenDiv){
+        if (Number.isFinite(h2i)&&Number.isFinite(h1i)){
+          const priceLH = h[h1i] < h[h2i], rsiHH=rsi[h1i] > rsi[h2i], difHH=dif[h1i] > dif[h2i];
+          if (priceLH && (rsiHH||difHH)) add('DIV','BEAR','Hidden bear div',1.5,'Price LH, RSI/DIF HH');
+        }
+        if (Number.isFinite(l2i)&&Number.isFinite(l1i)){
+          const priceHL = l[l1i] > l[l2i], rsiLL=rsi[l1i] < rsi[l2i], difLL=dif[l1i] < dif[l2i];
+          if (priceHL && (rsiLL||difLL)) add('DIV','BULL','Hidden bull div',1.5,'Price HL, RSI/DIF LL');
+        }
+      }
+    }
+
+    // BOS
+    if (cfg.enBOS){
+      const piv=(arr,L=cfg.pivotLeft,R=cfg.pivotRight)=>{
+        const hi=[], lo=[];
+        for(let k=L;k<arr.length-R;k++){
+          let isHi=true,isLo=true;
+          for(let t=k-L;t<=k+R;t++){ if(arr[t]>arr[k]) isHi=false; if(arr[t]<arr[k]) isLo=false; if(!isHi&&!isLo) break; }
+          if(isHi) hi.push(k); if(isLo) lo.push(k);
+        } return {hi,lo};
+      };
+      const pvH=piv(h), pvL=piv(l); const last=A=>A.length?A[A.length-1]:null;
+      const swingH=Number.isFinite(last(pvH.hi))?h[last(pvH.hi)]:null;
+      const swingL=Number.isFinite(last(pvL.lo))?l[last(pvL.lo)]:null;
+      if (swingH!=null && c[i]>swingH) add('BOS','BULL','BOS up',2,'Above swing high');
+      if (swingL!=null && c[i]<swingL) add('BOS','BEAR','BOS down',2,'Below swing low');
+    }
+
+    // Vol spike (neutral)
+    if (cfg.enVol){
+      const volSMA20=SMA(v,20,i);
+      if (volSMA20 && v[i] > volSMA20 * cfg.volMult) out.push({cat:'VOL',dir:'NEUTRAL',label:'VolSpike',score:(cfg.wVOL||1)*1,rawScore:1,why:`Vol > SMA20 × ${cfg.volMult}`});
+    }
+
+    // BB
+    if (cfg.enBB){
+      const bbR=BB(c, cfg.bbLen, cfg.bbK);
+      const widthPct = (bbR.up[i]-bbR.lo[i])/(bbR.mid[i]||1)*100;
+      if (widthPct <= cfg.bbSqueezePct) out.push({cat:'BB',dir:'NEUTRAL',label:'BB Squeeze',score:(cfg.wBB||1)*1,rawScore:1,why:`Width ${widthPct.toFixed(2)}% ≤ ${cfg.bbSqueezePct}%`});
+      if (c[i]>bbR.up[i] && c[i-1]<=bbR.up[i-1]) add('BB','BULL','BB breakout ↑',1,'Close > upper band');
+      if (c[i]<bbR.lo[i] && c[i-1]>=bbR.lo[i-1]) add('BB','BEAR','BB breakout ↓',1,'Close < lower band');
+    }
+
+    // TDI
+    if (cfg.enTDI){
+      const t=TDI(c, cfg); const r=t.rsi, s=t.signal, b=t.bb;
+      if (r[i]!=null && s[i]!=null && r[i-1]!=null && s[i-1]!=null){
+        if (r[i]>s[i] && r[i-1]<=s[i-1]) add('TDI','BULL','TDI bull cross',2,'RSI > Signal');
+        if (r[i]<s[i] && r[i-1]>=s[i-1]) add('TDI','BEAR','TDI bear cross',2,'RSI < Signal');
+      }
+      if (b && b.up[i]!=null && b.lo[i]!=null){
+        if (r[i]<b.up[i] && r[i-1]>=b.up[i-1]) add('TDI','BEAR','TDI re-enter upper band',1,'mean revert');
+        if (r[i]>b.lo[i] && r[i-1]<=b.lo[i-1]) add('TDI','BULL','TDI re-enter lower band',1,'mean revert');
+      }
+    }
+
+    // CHART
+    if (cfg.enChart && c.length>50){
+      const tol = c[i]*(cfg.dblTolPct/100);
+      const piv=(arr,L=cfg.pivotLeft,R=cfg.pivotRight)=>{
+        const hi=[], lo=[];
+        for(let k=L;k<arr.length-R;k++){
+          let isHi=true,isLo=true;
+          for(let t=k-L;t<=k+R;t++){ if(arr[t]>arr[k]) isHi=false; if(arr[t]<arr[k]) isLo=false; if(!isHi&&!isLo) break; }
+          if(isHi) hi.push(k); if(isLo) lo.push(k);
+        } return {hi,lo};
+      };
+
+      const pvH=piv(h), pvL=piv(l); const last2=A=>A.length>=2?A.slice(-2):[];
+      const [h1i,h2i]=last2(pvH.hi), [l1i,l2i]=last2(pvL.lo);
+      if (Number.isFinite(h2i)&&Number.isFinite(h1i)){
+        const eqHi=Math.abs(h[h1i]-h[h2i])<=tol;
+        if (eqHi){
+          const neck=Math.min(...l.slice(Math.min(h2i,h1i), Math.max(h2i,h1i)+1));
+          const active = c[i] < neck;
+          add('CHART', active?'BEAR':'NEUTRAL', active?'Double Top – activated':'Double Top – forming', active?2.5:1.2, active?'Neckline broken ↓':'Two highs ~equal');
+        }
+      }
+	  
+	  
+      if (Number.isFinite(l2i)&&Number.isFinite(l1i)){
+        const eqLo=Math.abs(l[l1i]-l[l2i])<=tol;
+        if (eqLo){
+          const neck=Math.max(...h.slice(Math.min(l2i,l1i), Math.max(l2i,l1i)+1));
+          const active = c[i] > neck;
+          add('CHART', active?'BULL':'NEUTRAL', active?'Double Bottom – activated':'Double Bottom – forming', active?2.5:1.2, active?'Neckline broken ↑':'Two lows ~equal');
+        }
+      }
+	  
+	  
+      const L=Math.min(cfg.chartLookback, c.length-5); const s=c.length-L;
+      if (L>=40){
+        const xs=Array.from({length:L},(_,k)=>s+k);
+        const upLR=linRegXY(xs, h.slice(s)), loLR=linRegXY(xs, l.slice(s));
+        const rngStart=(h[s]-l[s]), rngEnd=(h[c.length-1]-l[c.length-1]); const contracting=rngEnd<rngStart*0.7;
+        const upNow=linVal(upLR, c.length-1), loNow=linVal(loLR, c.length-1);
+        if (contracting && (upLR.m<0 && loLR.m>0)) out.push({cat:'CHART',dir:'NEUTRAL',label:'Symmetrical triangle',score:(cfg.wCHART||1)*1,rawScore:1,why:'Contracting, opposite slopes'});
+        if (c[i] > upNow) add('CHART','BULL','Trendline breakout ↑',2,'Close above upper regression');
+        if (c[i] < loNow) add('CHART','BEAR','Trendline breakout ↓',2,'Close below lower regression');
+      }
+    }
+
+    // HA (opcionális)
+    if (cfg.enHA && c.length>=5){
+      const ha = heikinAshiSeries(o,h,l,c), k=c.length-1;
+      const bullSeq=(ha.hc[k]>ha.ho[k])&&(ha.hc[k-1]>ha.ho[k-1])&&(ha.hc[k-2]>ha.ho[k-2])&&(ha.hc[k]>ha.hh[k-1]);
+      const bearSeq=(ha.hc[k]<ha.ho[k])&&(ha.hc[k-1]<ha.ho[k-1])&&(ha.hc[k-2]<ha.ho[k-2])&&(ha.hc[k]<ha.hl[k-1]);
+      if (bullSeq) add('HA','BULL','HA 3× up',1.2,'3 consecutive HA green');
+      if (bearSeq) add('HA','BEAR','HA 3× down',1.2,'3 consecutive HA red');
+    }
+
+    return {
+      list:out, bull, bear,
+      ctx:{ price, ts: bars.at(-1)?.tsEnd || null }
+    };
+  }
+
+  function approxHTF(tf, ratio){
+    const order=['1m','3m','5m','15m','30m','1h','2h','4h','1d']; const ms=order.map(t=>({t,ms:tfMs(t)}));
+    const target=tfMs(tf)*ratio; let best='4h', diff=Infinity;
+    for(const x of ms){ const d=Math.abs(x.ms-target); if(d<diff){ diff=d; best=x.t; } } return best;
+  }
+  function acceptRegime(htfBars, tsEnd, longDir, requireSlope){
+    if(!htfBars||!htfBars.length) return true;
+    let k=htfBars.findIndex(b=>b.tsEnd>tsEnd); if(k<0) k=htfBars.length-1; else k=Math.max(0,k-1);
+    const seg=htfBars.slice(0,k+1); const c=seg.map(x=>x.close); const e50=EMA(c,50), e200=EMA(c,200);
+    const price=c.at(-1), e50v=e50.at(-1), e200v=e200.at(-1);
+    if (![price,e50v,e200v].every(Number.isFinite)) return true;
+    const trendOK = longDir ? (price>e200v && e50v>e200v) : (price<e200v && e50v<e200v);
+    if (!trendOK) return false;
+    if (requireSlope){
+      const e50prev=e50.at(-2); if (Number.isFinite(e50prev) && Number.isFinite(e50v)){
+        if (longDir && !(e50v>e50prev)) return false;
+        if (!longDir && !(e50v<e50prev)) return false;
+      }
+    }
+    return true;
+  }
+
+  function computeLiveEntry(sym, tf, cfgEff, preDet){
+    const d=ensureSym(sym);
+    let bars=d.kCache.get(tf)||[]; bars=bars.filter(b=>b.final);
+    if (bars.length<60) return {text:'—',cls:'neutral'};
+
+    const lastIdx=bars.length-1; const lastBar=bars[lastIdx];
+    let htfBars1=null, htfBars2=null;
+    if (cfgEff.useHTF){ const htfTF=approxHTF(tf, cfgEff.htfRatio); const pool=ensureSym(sym).kCache.get(htfTF); if(pool&&pool.length) htfBars1=pool.filter(b=>b.final); }
+    if (cfgEff.useHTF2){ const htfTF2=approxHTF(tf, cfgEff.htfRatio2); const pool2=ensureSym(sym).kCache.get(htfTF2); if(pool2&&pool2.length) htfBars2=pool2.filter(b=>b.final); }
+
+    function passRegime(longGate, ts){
+      const p1 = !cfgEff.useHTF || acceptRegime(htfBars1, ts, longGate, cfgEff.requireHTFSlope);
+      const p2 = !cfgEff.useHTF2 || acceptRegime(htfBars2, ts, longGate, cfgEff.requireHTFSlope2);
+      return p1 && p2;
+    }
+
+    if (cfgEff.confirmNext){
+      const slicePrev=bars.slice(0,lastIdx);
+      const det=preDet||detectWeighted(sym, tf, cfgEff, slicePrev);
+      const longGate=det.bull>det.bear && det.bull>=cfgEff.minSignalScore;
+      const shortGate=det.bear>det.bull && det.bear>=cfgEff.minSignalScore;
+      if (longGate && passRegime(true, slicePrev.at(-1).tsEnd)){
+        const conf= lastBar.close > Math.max(slicePrev.at(-1).high, slicePrev.at(-2)?.high ?? -Infinity);
+        return {text:conf?'ENTRY LONG':'ARM LONG', cls:conf?'bull':'neutral'};
+      }
+      if (shortGate && passRegime(false, slicePrev.at(-1).tsEnd)){
+        const conf= lastBar.close < Math.min(slicePrev.at(-1).low, slicePrev.at(-2)?.low ?? Infinity);
+        return {text:conf?'ENTRY SHORT':'ARM SHORT', cls:conf?'bear':'neutral'};
+      }
+      return {text:'NO ENTRY', cls:'neutral'};
+    } else {
+      const det=preDet||detectWeighted(sym, tf, cfgEff, bars);
+      if (det.bull>det.bear && det.bull>=cfgEff.minSignalScore && passRegime(true, bars.at(-1).tsEnd)){
+        return {text:'ENTRY LONG', cls:'bull'};
+      }
+      if (det.bear>det.bull && det.bear>=cfgEff.minSignalScore && passRegime(false, bars.at(-1).tsEnd)){
+        return {text:'ENTRY SHORT', cls:'bear'};
+      }
+      return {text:'NO ENTRY', cls:'neutral'};
+    }
+  }
+
+  // ---------------------------- RENDER ---------------------------- //
+  function renderRow(sym, iv, taRec){
+    const tr = upsertRow(sym, iv);
+    if (!tr) return;
+
+    const d = ensureSym(sym);
+    if (Number.isFinite(d.lastPrice)) setHeadPrice(sym, fmtPx(sym, d.lastPrice));
+
+    // State (trend + ATR)
+    const chips=[];
+    if (taRec && Number.isFinite(taRec.priceClose ?? d.lastPrice)){
+      const lastPrice = taRec.priceClose ?? d.lastPrice;
+      const e50=taRec.e50, e200=taRec.e200, e50prev=taRec.e50prev;
+      if ([e50,e200].every(Number.isFinite)){
+        const trend = (lastPrice>e200 && e50>e200) ? 'Bull' : (lastPrice<e200 && e50<e200 ? 'Bear' : 'Neutral');
+        const cls = trend==='Bull' ? 'bull' : (trend==='Bear' ? 'bear' : 'neutral');
+        const slope = (Number.isFinite(e50prev)&&Number.isFinite(e50)) ? (e50>e50prev?'↗︎':(e50<e50prev?'↘︎':'→')) : '—';
+        chips.push(`<span class="chip ${cls==='neutral'?'':cls}">Trend: <b>${trend}</b></span>`);
+        chips.push(`<span class="chip">EMA50: <b>${slope}</b></span>`);
+      }
+      if (Number.isFinite(taRec.atrPct)) chips.push(`<span class="chip">ATR%: <b>${fmtN(taRec.atrPct,3)}%</b></span>`);
+    }
+    tr.querySelector('.state').innerHTML = chips.join(' ') || '—';
+
+    // MACD
+    tr.querySelector('.macd').innerHTML =
+      `<span title="DIF = TV MACD line" class="${(taRec.dif??0)>=0?'green':''}">DIF: ${fmtN(taRec.dif,6)}</span>
+       <span title="DEA = TV Signal line" class="${(taRec.dea??0)>=0?'green':''}">DEA: ${fmtN(taRec.dea,6)}</span>
+       <span title="MACD = histogram" class="${(taRec.macd??0)>=0?'green':'red'}">MACD: ${fmtN(taRec.macd,6)}</span>`;
+
+    const clsForDir = (d)=> d==='BULL' ? 'bull' : (d==='BEAR' ? 'bear' : 'neutral');
+    const patsHtml = (taRec.topPatterns||[])
+      .map(p => `<span class="badge ${clsForDir(p.dir)}" title="${p.why||''}">[${p.cat}] ${p.label}${p.score?` · ${fmtN(p.score,2)}`:''}</span>`)
+      .join(' ');
+    tr.querySelector('.patterns').innerHTML = patsHtml || '<span class="muted">—</span>';
+
+    // Score
+    tr.querySelector('.score').innerHTML =
+      `<span class="badge bull">Bull: ${fmtN(taRec.bull,2)}</span> <span class="badge bear">Bear: ${fmtN(taRec.bear,2)}</span>`;
+
+    const effCfg = effectiveCfgFor(iv);
+    const entry = computeLiveEntry(sym, iv, effCfg, { bull: taRec.bull, bear: taRec.bear });
+    tr.querySelector('.entry').innerHTML = `<span class="badge ${entry.cls}">${entry.text}</span>`;
+
+    let sig='NEUTRAL', w=0;
+    if (entry.text==='ENTRY LONG'){ sig='BUY'; w=1.0; }
+    else if (entry.text==='ENTRY SHORT'){ sig='SELL'; w=1.0; }
+    else if (entry.text==='ARM LONG'){ sig='BUY'; w=0.5; }
+    else if (entry.text==='ARM SHORT'){ sig='SELL'; w=0.5; }
+    tr.dataset.signal = sig;
+    tr.dataset.weight = String(w);
+
+    tr.querySelector('.ts').textContent =
+      taRec.ts ? htime(taRec.ts) :
+      (ensureSym(sym).lastTs ? htime(ensureSym(sym).lastTs) : '—');
+
+    updateConsensus(sym);
+  }
+
+  function computeFromCache(sym, iv, force=false){
+    const d=ensureSym(sym); let arr=d.kCache.get(iv)||[];
+    if (!arr.length) return;
+    const closed=arr.filter(x=>x.final===true).length; if (!force && closed<MIN_BARS_FOR_STABLE) return;
+
+    const o=arr.map(x=>x.open), h=arr.map(x=>x.high), l=arr.map(x=>x.low), c=arr.map(x=>x.close);
+    const e7=EMA(c,7), e20=EMA(c,20), e50=EMA(c,50), e200=EMA(c,200);
+    const {dif,dea,hist}=MACD_EMA(c,12,26,9); const atr=ATR(o,h,l,c,14);
+
+    const det=detectWeighted(sym, iv, effectiveCfgFor(iv), arr);
+    const rec={
+      e7:e7.at(-1), e20:e20.at(-1), e50:e50.at(-1), e200:e200.at(-1),
+      e50prev:e50.at(-2)??null,
+      dif:dif.at(-1), dea:dea.at(-1), macd:hist.at(-1),
+      atr:atr.at(-1), priceClose:c.at(-1),
+      ts: arr.at(-1)?.tsEnd || Date.now(),
+      bull:det.bull, bear:det.bear,
+      topPatterns: det.list.sort((a,b)=>b.score-a.score).slice(0,6),
+      atrPct: (atr.at(-1) && c.at(-1)) ? (atr.at(-1)/c.at(-1)*100) : null
+    };
+    saveTa(sym, iv, rec);
+    renderRow(sym, iv, rec);
+  }
+
+  // ---------------------------- PRICE PAINT THROTTLE ---------------------------- //
+  let pageHidden=false; document.addEventListener('visibilitychange', ()=>{ pageHidden=document.hidden; });
+  function schedulePricePaint(sym){
+    if (pageHidden) return;
+    const d=ensureSym(sym); const now=performance.now();
+    if (now - d.pricePaintTs < 1000/Math.max(1,MAX_FPS)) return;
+    if (d.raf) return;
+    d.pricePaintTs=now; d.raf=true;
+    requestAnimationFrame(()=>{ d.raf=false;
+      const item=state.list.find(x=>x.sym===sym); if(!item) return;
+      setHeadPrice(sym, fmtPx(sym, d.lastPrice));
+      updateConsensus(sym);
+    });
+  }
+
+  // ---------------------------- SUBSCRIBE ---------------------------- //
+  function subscribePrice(sym){
+    let first=false;
+    wsHub.subscribe(sym, 'trade', (t)=>{
+      const px=parseFloat(t.p); const time=t.T ?? t.E ?? Date.now();
+      if (!Number.isFinite(px)) return;
+      const d=ensureSym(sym); d.lastPrice=px; d.lastTs=time;
+      if (!first){ first=true; setStatus(sym,'Live'); }
+      schedulePricePaint(sym);
+    });
+  }
+  function subscribeKline(sym, iv){
+    wsHub.subscribe(sym, `kline_${iv}`, (msg)=>{
+      const k=msg?.k; if(!k) return;
+      const d=ensureSym(sym);
+      const rec={open:+k.o, high:+k.h, low:+k.l, close:+k.c, volume:+k.v, tsStart:+k.t, tsEnd:+k.T, final:!!k.x};
+      const arr=d.kCache.get(iv)||[]; const last=arr[arr.length-1];
+      if (last && last.tsStart===rec.tsStart) arr[arr.length-1]=rec; else { arr.push(rec); if (arr.length>1000) arr.splice(0,arr.length-1000); }
+      d.kCache.set(iv, arr);
+      const now=Date.now(); const lastCalc=d.lastCalcTs.get(iv)||0;
+      if (rec.final || (now-lastCalc)>=COMPUTE_THROTTLE_MS){ computeFromCache(sym, iv, rec.final); d.lastCalcTs.set(iv, now); }
+    });
+  }
+
+  // ---------------------------- BACKFILL & OPEN ---------------------------- //
+
+  function withConcurrency(limit, tasks){
+    const q=[...tasks], run=[];
+    for (let i=0; i<Math.min(limit, q.length); i++){
+      run.push((async function worker(){
+        while(q.length){
+          const job=q.shift();
+          try{ await job(); }catch(e){}
+        }
+      })());
+    }
+    return Promise.all(run);
+  }
+
+  async function backfillAll(sym, intervals){
+    setStatus(sym,'Backfill…');
+    const d = ensureSym(sym);
+    const jobs = intervals.map(iv => async ()=>{
+      const kl = await fetchKlines(sym, iv, 1000);
+      d.kCache.set(iv, kl.slice(-1000));
+      computeFromCache(sym, iv, true);
+    });
+    try{
+      await withConcurrency(3, jobs);
+    } finally {
+      setStatus(sym,'Live');
+    }
+  }
+
+  async function openSymbol(sym, intervals){
+    sym = String(sym).toUpperCase().trim();
+    if(!/^[A-Z0-9]{6,}$/.test(sym)) return;
+
+    const exists = state.list.find(x=>x.sym===sym);
+    if (!exists && state.list.length>=4){
+      alert('You’ve reached the 4-card limit. Close a card to add a new one.');
+      return;
+    }
+
+    ensureCard(sym); setStatus(sym,'Connecting…'); ensureSym(sym);
+
+    if (!exists){
+      state.list.push({sym, intervals:[...intervals]}); saveState();
+      for (const iv of intervals) upsertRow(sym, iv);
+      subscribePrice(sym);
+      for (const iv of intervals) subscribeKline(sym, iv);
+      await backfillAll(sym, intervals);    // ← egységes név
+    } else {
+      const missing = intervals.filter(iv => !exists.intervals.includes(iv));
+      if (missing.length){
+        exists.intervals.push(...missing); saveState();
+        for (const iv of missing) upsertRow(sym, iv);
+        for (const iv of missing) subscribeKline(sym, iv);
+        await backfillAll(sym, missing);    // ← egységes név
+      }
+    }
+  }
+
+  // ---------------------------- HELPERS Settings ---------------------------- //
+  function buildTfPresetUI(){
+    tfPresetGrid.innerHTML='';
+    for (const tf of ALL_INTS){
+      const wrap=document.createElement('div');
+      wrap.innerHTML = `<label>${tf} → </label>`;
+      wrap.style.display='flex'; wrap.style.alignItems='center'; wrap.style.gap='8px';
+      const sel=document.createElement('select');
+      for (const name of PRESET_NAMES){
+        const opt=document.createElement('option'); opt.value=name; opt.textContent=name;
+        sel.appendChild(opt);
+      }
+      sel.value = state.tfMap[tf] || DEFAULT_TF_MAP[tf] || 'balanced';
+      sel.addEventListener('change', ()=>{ state.tfMap[tf]=sel.value; });
+      wrap.appendChild(sel);
+      tfPresetGrid.appendChild(wrap);
+    }
+  }
+
+  function uiLoadCfgToControls(cfg){
+    cfgEls.enCandle.checked=!!cfg.enCandle; cfgEls.enMACD.checked=!!cfg.enMACD; cfgEls.enRSI.checked=!!cfg.enRSI;
+    cfgEls.enDiv.checked=!!cfg.enDiv; cfgEls.enHiddenDiv.checked=!!cfg.enHiddenDiv; cfgEls.enBOS.checked=!!cfg.enBOS;
+    cfgEls.enVol.checked=!!cfg.enVol; cfgEls.enBB.checked=!!cfg.enBB; cfgEls.enTDI.checked=!!cfg.enTDI; cfgEls.enChart.checked=!!cfg.enChart; cfgEls.enHA.checked=!!cfg.enHA;
+
+    cfgEls.minSignalScore.value=cfg.minSignalScore; cfgEls.atrMult.value=cfg.atrMult; cfgEls.dojiBodyPct.value=cfg.dojiBodyPct;
+    cfgEls.soldierMinBodyPct.value=cfg.soldierMinBodyPct; cfgEls.volMult.value=cfg.volMult; cfgEls.bbLen.value=cfg.bbLen; cfgEls.bbK.value=cfg.bbK; cfgEls.bbSqueezePct.value=cfg.bbSqueezePct;
+    cfgEls.tdiRsiLen.value=cfg.tdiRsiLen; cfgEls.tdiSignalLen.value=cfg.tdiSignalLen; cfgEls.tdiBbLen.value=cfg.tdiBbLen; cfgEls.tdiBbK.value=cfg.tdiBbK;
+    cfgEls.pivotLeft.value=cfg.pivotLeft; cfgEls.pivotRight.value=cfg.pivotRight; cfgEls.chartLookback.value=cfg.chartLookback; cfgEls.dblTolPct.value=cfg.dblTolPct;
+
+    cfgEls.wCANDLE.value=cfg.wCANDLE; cfgEls.wMACD.value=cfg.wMACD; cfgEls.wRSI.value=cfg.wRSI; cfgEls.wDIV.value=cfg.wDIV;
+    cfgEls.wBOS.value=cfg.wBOS; cfgEls.wVOL.value=cfg.wVOL; cfgEls.wBB.value=cfg.wBB; cfgEls.wTDI.value=cfg.wTDI; cfgEls.wCHART.value=cfg.wCHART; cfgEls.wHA.value=cfg.wHA;
+
+    // HTF
+    cfg_useHTF.checked=cfg.useHTF; cfg_htfRatio.value=cfg.htfRatio; cfg_requireHTFSlope.checked=cfg.requireHTFSlope;
+    cfg_useHTF2.checked=cfg.useHTF2; cfg_htfRatio2.value=cfg.htfRatio2; cfg_requireHTFSlope2.checked=cfg.requireHTFSlope2;
+
+    cfg_atrLowPct.value=cfg.atrLowPct; cfg_atrHighPct.value=cfg.atrHighPct; cfg_confirmNext.checked=cfg.confirmNext;
+    cfg_adaptMinLow.value=cfg.adaptMinLow; cfg_adaptMinHigh.value=cfg.adaptMinHigh; cfg_adaptAtrLow.value=cfg.adaptAtrLow; cfg_adaptAtrHigh.value=cfg.adaptAtrHigh;
+  }
+
+  function uiReadCfgFromControls(){
+    const n = (x,mi,ma)=>Math.max(mi, Math.min(ma, Number(x)));
+    const p = (x)=>Number(x);
+    return {
+      enCandle:cfgEls.enCandle.checked, enMACD:cfgEls.enMACD.checked, enRSI:cfgEls.enRSI.checked, enDiv:cfgEls.enDiv.checked, enHiddenDiv:cfgEls.enHiddenDiv.checked,
+      enBOS:cfgEls.enBOS.checked, enVol:cfgEls.enVol.checked, enBB:cfgEls.enBB.checked, enTDI:cfgEls.enTDI.checked, enChart:cfgEls.enChart.checked, enHA:cfgEls.enHA.checked,
+      minSignalScore: n(cfgEls.minSignalScore.value, 0, 10),
+      atrMult: n(cfgEls.atrMult.value, 0, 3),
+      dojiBodyPct: n(cfgEls.dojiBodyPct.value, 0.02, 0.5),
+      soldierMinBodyPct: n(cfgEls.soldierMinBodyPct.value, 0.3, 0.95),
+      volMult: n(cfgEls.volMult.value, 1, 5),
+      bbLen: Math.round(n(cfgEls.bbLen.value, 5, 100)),
+      bbK: n(cfgEls.bbK.value, 0.5, 4),
+      bbSqueezePct: n(cfgEls.bbSqueezePct.value, 0.5, 20),
+      tdiRsiLen: Math.round(n(cfgEls.tdiRsiLen.value, 5, 50)),
+      tdiSignalLen: Math.round(n(cfgEls.tdiSignalLen.value, 2, 30)),
+      tdiBbLen: Math.round(n(cfgEls.tdiBbLen.value, 5, 100)),
+      tdiBbK: n(cfgEls.tdiBbK.value, 0.5, 3),
+      pivotLeft: Math.round(n(cfgEls.pivotLeft.value, 1, 15)),
+      pivotRight: Math.round(n(cfgEls.pivotRight.value, 1, 15)),
+      chartLookback: Math.round(n(cfgEls.chartLookback.value, 40, 500)),
+      dblTolPct: n(cfgEls.dblTolPct.value, 0.05, 5),
+      wCANDLE:p(cfgEls.wCANDLE.value), wMACD:p(cfgEls.wMACD.value), wRSI:p(cfgEls.wRSI.value), wDIV:p(cfgEls.wDIV.value),
+      wBOS:p(cfgEls.wBOS.value), wVOL:p(cfgEls.wVOL.value), wBB:p(cfgEls.wBB.value), wTDI:p(cfgEls.wTDI.value), wCHART:p(cfgEls.wCHART.value), wHA:p(cfgEls.wHA.value),
+
+      // HTF
+      useHTF: cfg_useHTF.checked, htfRatio: n(cfg_htfRatio.value, 2, 60), requireHTFSlope: cfg_requireHTFSlope.checked,
+      useHTF2: cfg_useHTF2.checked, htfRatio2: n(cfg_htfRatio2.value, 2, 120), requireHTFSlope2: cfg_requireHTFSlope2.checked,
+      atrLowPct: n(cfg_atrLowPct.value, 0.01, 100), atrHighPct: n(cfg_atrHighPct.value, 0.01, 200), confirmNext: cfg_confirmNext.checked,
+      adaptMinLow: Number(cfg_adaptMinLow.value), adaptMinHigh: Number(cfg_adaptMinHigh.value),
+      adaptAtrLow: Math.max(0.01, Number(cfg_adaptAtrLow.value)||1), adaptAtrHigh: Math.max(0.01, Number(cfg_adaptAtrHigh.value)||1)
+    };
+  }
+
+  // ---------------------------- PRESET BUTTONS ---------------------------- //
+  const presetButtons = settings ? settings.querySelectorAll('.presetbar button') : [];
+  if (presetButtons) presetButtons.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const name=btn.dataset.preset;
+      const cfg = {...state.cfg, ...presetOverrides(name)};
+      saveCfg(cfg);
+      state.cfg = cfg;
+      uiLoadCfgToControls(cfg);
+      for (const item of state.list){ for (const iv of item.intervals){ computeFromCache(item.sym, iv, true); } }
+    });
+  });
+
+  // ---------------------------- SETTINGS BUTTONS ---------------------------- //
+  function buildDefaultIntervalsFromUI(){
+    return Array.from(defIntervalsWrap.querySelectorAll('input[type="checkbox"]'))
+      .filter(ch=>ch.checked)
+      .map(ch=>ch.value)
+      .filter(v=>ALL_INTS.includes(v));
+  }
+
+  function readTfMapFromUI(){
+    const out={...DEFAULT_TF_MAP};
+    const selects = tfPresetGrid.querySelectorAll('select');
+    selects.forEach((sel,i)=>{
+      const tf = ALL_INTS[i];
+      if (PRESET_NAMES.includes(sel.value)) out[tf]=sel.value;
+    });
+    state.tfMap = out;
+    saveTfMap(out);
+  }
+
+  btnSettings.addEventListener('click', ()=>{
+    defPairsEl.value = loadDefaultPairs().join(', ');
+    defPeriodEl.value= String(loadDefaultPeriod());
+    const set=new Set(loadDefaultIntervals());
+    defIntervalsWrap.querySelectorAll('input[type="checkbox"]').forEach(ch=> ch.checked=set.has(ch.value));
+    const adv=loadAdv(); advThrottleMsEl.value=String(adv.throttleMs); advMinBarsEl.value=String(adv.minBars); advMaxFpsEl.value=String(adv.maxFps);
+    uiLoadCfgToControls(state.cfg);
+    buildTfPresetUI();
+    settings.classList.add('open');
+  });
+  btnCloseSettings.addEventListener('click', ()=> settings.classList.remove('open'));
+
+  btnSaveDefaults.addEventListener('click', ()=>{
+    readTfMapFromUI();
+
+    let pairs=defPairsEl.value.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean);
+    pairs=Array.from(new Set(pairs)).slice(0,4);
+    const ivs=buildDefaultIntervalsFromUI();
+    const per=Math.max(5,Math.min(600,parseInt(defPeriodEl.value||'30',10)));
+    const adv={
+      throttleMs:Math.max(200,Math.min(10000,parseInt(advThrottleMsEl.value||String(DEFAULT_ADV.throttleMs),10))),
+      minBars:   Math.max(100,Math.min(1000, parseInt(advMinBarsEl.value||String(DEFAULT_ADV.minBars),10))),
+      maxFps:    Math.max(1,  Math.min(60,   parseInt(advMaxFpsEl.value||String(DEFAULT_ADV.maxFps),10)))
+    };
+    const cfg = uiReadCfgFromControls();
+
+    try{
+      localStorage.setItem(LS_DEF_PS, JSON.stringify(pairs.length?pairs:DEFAULT_PAIRS.slice(0,4)));
+      localStorage.setItem(LS_DEF_IV, JSON.stringify(ivs.length?ivs:DEFAULT_INTS));
+      localStorage.setItem(LS_DEF_PER, String(per));
+      localStorage.setItem(LS_ADV, JSON.stringify(adv));
+      saveCfg(cfg);
+      saveTfMap(state.tfMap);
+    }catch{}
+
+    COMPUTE_THROTTLE_MS=adv.throttleMs; MIN_BARS_FOR_STABLE=adv.minBars; MAX_FPS=adv.maxFps;
+    state.cfg = cfg;
+    for (const item of state.list){ for (const iv of item.intervals){ computeFromCache(item.sym, iv, true); } }
+    periodInput.value=String(per); state.period=per; saveState();
+  });
+
+  btnApplyDefaults.addEventListener('click', ()=>{
+    readTfMapFromUI();
+
+    let pairs=defPairsEl.value.split(/[\s,;]+/).map(s=>s.trim().toUpperCase()).filter(Boolean);
+    pairs=Array.from(new Set(pairs)).slice(0,4);
+    if(!pairs.length) pairs=DEFAULT_PAIRS.slice(0,4);
+    const ivs=buildDefaultIntervalsFromUI();
+    const per=Math.max(5,Math.min(600,parseInt(defPeriodEl.value||'30',10)));
+    const adv={
+      throttleMs:Math.max(200,Math.min(10000,parseInt(advThrottleMsEl.value||String(DEFAULT_ADV.throttleMs),10))),
+      minBars:   Math.max(100,Math.min(1000, parseInt(advMinBarsEl.value||String(DEFAULT_ADV.minBars),10))),
+      maxFps:    Math.max(1,  Math.min(60,   parseInt(advMaxFpsEl.value||String(DEFAULT_ADV.maxFps),10)))
+    };
+    const cfg = uiReadCfgFromControls();
+
+    try{
+      localStorage.setItem(LS_DEF_PS, JSON.stringify(pairs));
+      localStorage.setItem(LS_DEF_IV, JSON.stringify(ivs.length?ivs:DEFAULT_INTS));
+      localStorage.setItem(LS_DEF_PER, String(per));
+      localStorage.setItem(LS_ADV, JSON.stringify(adv));
+      saveCfg(cfg);
+      saveTfMap(state.tfMap);
+    }catch{}
+
+    COMPUTE_THROTTLE_MS=adv.throttleMs; MIN_BARS_FOR_STABLE=adv.minBars; MAX_FPS=adv.maxFps;
+    state.cfg = cfg;
+
+    cards.innerHTML=''; for(const item of state.list) wsHub.unsubscribe(item.sym); symData.clear();
+    state.list = pairs.map(sym=>({sym, intervals:[...(ivs.length?ivs:DEFAULT_INTS)]})).slice(0,4);
+    state.period=per; saveState();
+
+    wsHub.ensureOpen();
+    (async ()=>{
+      for (const item of state.list){
+        ensureCard(item.sym); setStatus(item.sym,'Connecting…'); ensureSym(item.sym);
+        for(const iv of item.intervals) upsertRow(item.sym, iv);
+        subscribePrice(item.sym);
+        for(const iv of item.intervals) subscribeKline(item.sym, iv);
+        await backfillAll(item.sym, item.intervals);
+        setStatus(item.sym,'Live');
+      }
+    })();
+    settings.classList.remove('open');
+  });
+
+  btnHelp.addEventListener('click', ()=> helpDrawer.classList.add('open'));
+  btnCloseHelp.addEventListener('click', ()=> helpDrawer.classList.remove('open'));
+
+  // ---------------------------- ACTIONS ---------------------------- //
+  addBtn.addEventListener('click', async ()=>{
+    const raw=symInput.value.trim(); if(!raw){ alert('Enter at least one symbol.'); return; }
+    const picks=Array.from(document.querySelectorAll('.ival')).filter(x=>x.checked).map(x=>x.value).filter(v=>ALL_INTS.includes(v));
+    if (!picks.length){ alert('Select at least one timeframe.'); return; }
+    const syms=raw.split(/[\s,;]+/).map(s=>s.toUpperCase()).filter(Boolean);
+
+    const existingSyms = new Set(state.list.map(x=>x.sym));
+    const newcomers = syms.filter(s=>!existingSyms.has(s));
+    const extenders = syms.filter(s=>existingSyms.has(s));
+
+    let remaining = 4 - state.list.length;
+    const toOpen = newcomers.slice(0, Math.max(0, remaining));
+    const skipped = newcomers.slice(Math.max(0, remaining));
+    if (skipped.length) alert('Skipped due to the 4-card limit: '+skipped.join(', '));
+
+    for (const s of toOpen){ await openSymbol(s, picks); }
+    for (const s of extenders){ await openSymbol(s, picks); }
+
+    symInput.value='';
+  });
+
+  refreshBtn.addEventListener('click', async ()=>{
+    status('Refreshing…');
+    for(const item of state.list){ await backfillAll(item.sym, item.intervals); }
+    status('Done.');
+  });
+
+  const btn = document.getElementById('factoryReset');
+  if(!btn) return;
+  btn.addEventListener('click', ()=>{
+    if(!confirm('Reset all settings to defaults?')) return;
+    try{
+      localStorage.removeItem(LS_CFG);
+      localStorage.removeItem(LS_ADV);
+      ['mtf_cfg','mtf_adv','pattern_pro_cfg','pattern_pro_adv'].forEach(k=>localStorage.removeItem(k));
+    }catch(_){}
+    try{
+      state.cfg = { ...DEFAULT_CFG };
+      state.adv = { ...DEFAULT_ADV };
+    }catch(_){}
+    if (typeof renderSettings === 'function') renderSettings();
+    location.reload();
+  });
+
+
+  // ---------------------------- INIT ---------------------------- //
+  wsHub.ensureOpen();
+  (async function init(){
+    let timer=null;
+    const setTimer=()=>{ if(timer) clearInterval(timer); timer=setInterval(async ()=>{ for(const it of state.list){ await backfillAll(it.sym, it.intervals);} }, Math.max(5, state.period)*1000); };
+    periodInput.value=String(state.period);
+    periodInput.addEventListener('change', ()=>{ state.period=Math.max(5,Math.min(600,parseInt(periodInput.value||'30',10))); saveState(); setTimer(); });
+
+    for(const item of state.list){
+      ensureCard(item.sym); setStatus(item.sym,'Connecting…'); ensureSym(item.sym);
+      for(const iv of item.intervals) upsertRow(item.sym, iv);
+      subscribePrice(item.sym);
+      for(const iv of item.intervals) subscribeKline(item.sym, iv);
+    }
+    for(const item of state.list){ await backfillAll(item.sym, item.intervals); setStatus(item.sym,'Live'); }
+
+    setTimer();
+  })();
+
+  window.addEventListener('beforeunload', ()=>{ for(const item of state.list) wsHub.unsubscribe(item.sym); });
+})();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>US Recession & Crypto Risk Inspector – Live indicators</title>
+<style>
+  :root { --bg:#0b1020; --card:#121a33; --text:#e7ecff; --muted:#9fb2ff; --ok:#2dcc70; --warn:#f5a524; --bad:#ff5d5d; --accent:#6ea8fe; }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0f1d 0%,#0b1020 100%);color:var(--text);font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+  header{padding:18px 20px;position: relative;top:0;background:#0b1020dd;backdrop-filter:blur(6px);text-align: center;}
+  header h1{margin:0;font-weight:700;font-size:18px}
+  main{max-width:1500px;margin:24px auto;padding:0 16px;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid #1b2545;border-radius:16px;box-shadow:0 10px 30px #00000033}
+  .card .hd{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #1b2545}
+  .card .hd h3{margin:0;font-size:15px}
+  .card .bd{padding:14px 16px}
+  input[type="text"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #284079;background:#0f1630;color:var(--text)}
+  button{appearance:none;border:1px solid #284079;background:#0f1630;color:var(--text);padding:10px 14px;border-radius:10px;cursor:pointer}
+  button:hover{background:#12204a}
+  .muted{color:#9fb2ffaa}
+  .tag{display:inline-block;padding:2px 8px;border:1px solid #6ea8fe55;border-radius:999px;font-size:12px}
+  .tag.ok{color:#2dcc70;border-color:#2dcc7022;background:#2dcc7011}
+  .tag.warn{color:#f5a524;border-color:#f5a52422;background:#f5a52411}
+  .tag.bad{color:#ff6c6c;border-color:#ff6c6c22;background:#ff6c6c11}
+  .kv{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center}
+  .bar{height:14px;background:#1b274a;border-radius:999px;overflow:hidden}
+  .bar>div{height:100%;background:linear-gradient(90deg,#2dcc70,#f5a524,#ff5d5d);width:0%}
+  .grid-10{display:grid;gap:12px}
+  @media(min-width:900px){ .grid-10{grid-template-columns:repeat(5,1fr)} }
+  @media(max-width:899px){ .grid-10{grid-template-columns:repeat(2,1fr)} }
+  .metric{padding:10px;border:1px solid #1b2545;border-radius:12px;background:#0f1630}
+  .metric .top{display:grid;grid-template-columns:1fr auto;align-items:center;margin-bottom:8px}
+  .small{font-size:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px;border-bottom:1px solid #1b2545;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  tr:hover td{background:#0f1630}
+  .footer{color:#7f8bb5;padding:16px;text-align:center}
+.grid-4{display:grid;gap:12px}
+@media(min-width:900px){ .grid-4{grid-template-columns:repeat(4,1fr)} }
+@media(max-width:899px){ .grid-4{grid-template-columns:repeat(2,1fr)} }
+.icon-btn{font-size:12px;padding:6px 10px;border-radius:8px}
+.weights-panel{display:none;margin-top:12px;padding:10px;border:1px solid #1b2545;border-radius:12px;background:#0f1630}
+.weights-panel.open{display:block}
+.slider-row{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center;margin-bottom:8px}
+.slider-row input[type="range"]{width:100%}
+.weights-foot{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px}
+a {color: #9fb2ffaa;}
+</style>
+</head>
+<body>
+<header>
+  <h1>US Recession & Crypto Risk Inspector – Live indicators</h1>
+</header>
+
+<main>
+  <!-- Settings -->
+  <div class="card">
+    <div class="hd"><h3>Settings</h3></div>
+    <div class="bd">
+      <div class="kv" style="margin-bottom:10px">
+        <span>FRED API key</span>
+        <div></div>
+        <div style="display:flex;gap:8px">
+          <input id="apiKey" type="text" placeholder="e.g. a39f1a..." />
+          <button id="save">Save</button>
+          <button id="refresh">Refresh</button>
+        </div>
+      </div>
+      <div class="small muted" id="status">–</div>
+	  <div class="small muted">Free API key: <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">FRED registration</a> → <em>My Account → API Keys</em>. The key is stored in your browser (localStorage).</div>
+    </div>
+	</div>
+
+  <!-- Score -->
+  <div class="card">
+    <div class="hd"><h3>Aggregate recession risk</h3></div>
+    <div class="bd">
+      <div class="kv" style="margin-bottom:10px">
+        <span id="riskTag" class="tag warn">Neutral</span>
+        <div style="height:1px;background:#22305a"></div>
+        <span class="small muted">0 → bullish | 100 → bearish</span>
+      </div>
+      <div class="bar" style="margin-bottom:8px"><div id="totalBar"></div></div>
+      <div class="kv">
+        <span class="muted">Score</span>
+        <div style="height:1px;background:#22305a"></div>
+        <strong id="score">–</strong>
+      </div>
+      <div class="small muted" id="updated">–</div>
+    </div>
+  </div>
+
+  <!-- Components -->
+  <div class="card">
+    <div class="hd">
+      <h3>Components (weights)</h3>
+      <button id="weightsBtn" class="icon-btn">Weights</button>
+    </div>
+    <div class="bd">
+      <div class="grid-10">
+        <div class="metric"><div class="top"><strong>10Y–2Y yield spread</strong><span id="ycTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="ycBar"></div></div><div class="kv small"><span>Value</span><div></div><strong id="ycVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>10Y–3M yield spread</strong><span id="yc3mTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="yc3mBar"></div></div><div class="kv small"><span>Value</span><div></div><strong id="yc3mVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>VIX</strong><span id="vixTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="vixBar"></div></div><div class="kv small"><span>Value</span><div></div><strong id="vixVal">–</strong></div></div>
+		<div class="metric"><div class="top"><strong>Sahm rule</strong><span id="sahmTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="sahmBar"></div></div><div class="kv small"><span>U</span><div></div><strong id="sahmVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>Capacity Utilization</strong><span id="cuTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="cuBar"></div></div><div class="kv small"><span>CU</span><div></div><strong id="cuVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>Financial Stress (STLFSI2)</strong><span id="fsiTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="fsiBar"></div></div><div class="kv small"><span>FSI</span><div></div><strong id="fsiVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>Initial Claims (4w MA)</strong><span id="claimsTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="claimsBar"></div></div><div class="kv small"><span>MA(4)</span><div></div><strong id="claimsVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>LEI (USSLIND)</strong><span id="leadTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="leadBar"></div></div><div class="kv small"><span>Value</span><div></div><strong id="leadVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>Payrolls (PAYEMS YoY)</strong><span id="payemsTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="payemsBar"></div></div><div class="kv small"><span>YoY</span><div></div><strong id="payemsVal">–</strong></div></div>
+        <div class="metric"><div class="top"><strong>UMich Sentiment</strong><span id="sentTag" class="tag warn">Neutral</span></div><div class="bar" style="margin-bottom:8px"><div id="sentBar"></div></div><div class="kv small"><span>Index</span><div></div><strong id="sentVal">–</strong></div></div>
+      </div>
+	  <div id="weightsSummary" class="small muted" style="margin-top:8px"></div>
+	  <div id="weightsPanel" class="weights-panel">
+        <div class="small muted" style="margin-bottom:8px">
+          Set the weights of 10 components. When saving, we automatically normalize them to be 100%.
+        </div>
+        <div class="slider-row"><label>10Y–2Y</label><input id="w_yc" type="range" min="0" max="30" step="1"><span id="w_yc_val" class="small muted"></span></div>
+        <div class="slider-row"><label>10Y–3M</label><input id="w_yc3" type="range" min="0" max="30" step="1"><span id="w_yc3_val" class="small muted"></span></div>
+        <div class="slider-row"><label>VIX</label><input id="w_vix" type="range" min="0" max="30" step="1"><span id="w_vix_val" class="small muted"></span></div>
+		<div class="slider-row"><label>Sahm</label><input id="w_sahm" type="range" min="0" max="30" step="1"><span id="w_sahm_val" class="small muted"></span></div>
+        <div class="slider-row"><label>Capacity</label><input id="w_cu" type="range" min="0" max="30" step="1"><span id="w_cu_val" class="small muted"></span></div>
+        <div class="slider-row"><label>FSI</label><input id="w_fsi" type="range" min="0" max="30" step="1"><span id="w_fsi_val" class="small muted"></span></div>
+        <div class="slider-row"><label>Claims</label><input id="w_claims" type="range" min="0" max="30" step="1"><span id="w_claims_val" class="small muted"></span></div>
+        <div class="slider-row"><label>LEI</label><input id="w_lei" type="range" min="0" max="30" step="1"><span id="w_lei_val" class="small muted"></span></div>
+        <div class="slider-row"><label>Payrolls</label><input id="w_payems" type="range" min="0" max="30" step="1"><span id="w_payems_val" class="small muted"></span></div>
+        <div class="slider-row"><label>UMich Sentiment</label><input id="w_sent" type="range" min="0" max="30" step="1"><span id="w_sent_val" class="small muted"></span></div>
+		<div class="small muted" id="weightsSum">Sum: –</div>
+        <div class="weights-foot">
+          <button id="weightsReset">Reset to defaults</button>
+          <button id="weightsSave">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crypto -->
+  <div class="card">
+    <div class="hd"><h3>Crypto Risk (BTC)</h3></div>
+    <div class="bd">
+      <div class="kv" style="margin-bottom:6px"><span>BTC EMA(50/200) status</span><div></div><strong id="btcEmaStat">–</strong></div>
+      <div class="kv" style="margin-bottom:6px"><span>BTC dominance</span><div></div><strong id="btcDom">–</strong></div>
+      <div class="kv" style="margin-bottom:10px"><span>VIX component</span><div></div><strong id="btcVix">–</strong></div>
+      <div class="bar"><div id="cryptoBar"></div></div>
+      <div class="small muted" id="cryptoNote" style="margin-top:8px">–</div>
+    </div>
+  </div>
+
+<!-- Crypto wind -->
+<div class="card">
+  <div class="hd"><h3>Crypto wind (USD, real yield, liquidity, spread)</h3></div>
+  <div class="bd">
+    <div class="grid-4">
+      <div class="metric">
+        <div class="top"><strong>USD index YoY (DTWEXBGS)</strong><span id="windUsdTag" class="tag warn">Neutral</span></div>
+        <div class="bar" style="margin-bottom:8px"><div id="windUsdBar"></div></div>
+        <div class="kv small"><span>YoY</span><div></div><strong id="windUsdVal">–</strong></div>
+      </div>
+      <div class="metric">
+        <div class="top"><strong>10Y real yield (DFII10)</strong><span id="windRealTag" class="tag warn">Neutral</span></div>
+        <div class="bar" style="margin-bottom:8px"><div id="windRealBar"></div></div>
+        <div class="kv small"><span>Level</span><div></div><strong id="windRealVal">–</strong></div>
+      </div>
+      <div class="metric">
+        <div class="top"><strong>Fed balance sheet YoY (WALCL)</strong><span id="windWalclTag" class="tag warn">Neutral</span></div>
+        <div class="bar" style="margin-bottom:8px"><div id="windWalclBar"></div></div>
+        <div class="kv small"><span>YoY</span><div></div><strong id="windWalclVal">–</strong></div>
+      </div>
+      <div class="metric">
+        <div class="top"><strong>BAA–10Y spread</strong><span id="windBaaTag" class="tag warn">Neutral</span></div>
+        <div class="bar" style="margin-bottom:8px"><div id="windBaaBar"></div></div>
+        <div class="kv small"><span>Level</span><div></div><strong id="windBaaVal">–</strong></div>
+      </div>
+    </div>
+    <div class="kv" style="margin-top:10px">
+      <span class="muted">Aggregate wind</span><div></div><div class="bar" style="width:220px"><div id="windBar"></div></div>
+    </div>
+    <div class="small muted" id="windNote" style="margin-top:6px">–</div>
+  </div>
+</div>
+
+  <!-- USA makrók – kriptóra ható adatok táblázat -->
+  <div class="card">
+    <div class="hd"><h3>US macro – most crypto-relevant data</h3></div>
+    <div class="bd">
+      <div style="overflow:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Latest</th>
+              <th>-1</th>
+              <th>-2</th>
+              <th>-3</th>
+              <th>Direction</th>
+              <th>Crypto impact</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody id="macroBody"></tbody>
+        </table>
+      </div>
+      <div class="small muted" id="macroNote" style="margin-top:10px">–</div>
+    </div>
+  </div>
+  
+  <!-- Upcoming macro releases -->
+  <div class="card">
+    <div class="hd">
+      <h3>Upcoming macro releases (7 days)</h3>
+      <a href="https://fred.stlouisfed.org/releases/calendar" target="_blank" rel="noopener" class="small muted">Full FRED calendar →</a>
+    </div>
+    <div class="bd">
+      <div class="scroll-wrap">
+        <table id="upcomingTable">
+          <thead>
+            <tr><th style="width:120px">Date</th><th>Release</th></tr>
+          </thead>
+          <tbody id="upcomingBody"></tbody>
+        </table>
+      </div>
+      <div class="small muted" id="upcomingNote">–</div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const els = {
+  apiKey: $('apiKey'), save: $('save'), refresh: $('refresh'), status: $('status'),
+  totalBar: $('totalBar'), score: $('score'), updated: $('updated'), riskTag: $('riskTag'),
+  ycTag: $('ycTag'), ycBar: $('ycBar'), ycVal: $('ycVal'),
+  yc3mTag: $('yc3mTag'), yc3mBar: $('yc3mBar'), yc3mVal: $('yc3mVal'),
+  sahmTag: $('sahmTag'), sahmBar: $('sahmBar'), sahmVal: $('sahmVal'),
+  cuTag: $('cuTag'), cuBar: $('cuBar'), cuVal: $('cuVal'),
+  fsiTag: $('fsiTag'), fsiBar: $('fsiBar'), fsiVal: $('fsiVal'),
+  claimsTag: $('claimsTag'), claimsBar: $('claimsBar'), claimsVal: $('claimsVal'),
+  vixTag: $('vixTag'), vixBar: $('vixBar'), vixVal: $('vixVal'),
+  leadTag: $('leadTag'), leadBar: $('leadBar'), leadVal: $('leadVal'),
+  payemsTag: $('payemsTag'), payemsBar: $('payemsBar'), payemsVal: $('payemsVal'),
+  sentTag: $('sentTag'), sentBar: $('sentBar'), sentVal: $('sentVal'),
+  cryptoTag: $('cryptoTag'),
+  btcEmaStat: $('btcEmaStat'), btcDom: $('btcDom'), btcVix: $('btcVix'),
+  cryptoBar: $('cryptoBar'), cryptoNote: $('cryptoNote'),
+  macroBody: $('macroBody'), macroNote: $('macroNote'),
+  upcomingBody: $('upcomingBody'), upcomingNote: $('upcomingNote'),
+  
+  // Weight editor
+  weightsBtn: $('weightsBtn'), weightsPanel: $('weightsPanel'), weightsSummary: $('weightsSummary'),
+  w_yc: $('w_yc'), w_yc3: $('w_yc3'), w_sahm: $('w_sahm'), w_cu: $('w_cu'), w_fsi: $('w_fsi'),
+  w_claims: $('w_claims'), w_vix: $('w_vix'), w_lei: $('w_lei'), w_payems: $('w_payems'), w_sent: $('w_sent'),
+  w_yc_val: $('w_yc_val'), w_yc3_val: $('w_yc3_val'), w_sahm_val: $('w_sahm_val'), w_cu_val: $('w_cu_val'),
+  w_fsi_val: $('w_fsi_val'), w_claims_val: $('w_claims_val'), w_vix_val: $('w_vix_val'), w_lei_val: $('w_lei_val'),
+  w_payems_val: $('w_payems_val'), w_sent_val: $('w_sent_val'), weightsSum: $('weightsSum'), weightsReset: $('weightsReset'), weightsSave: $('weightsSave'),
+
+
+  // Crypto wind
+  windUsdTag: $('windUsdTag'), windUsdBar: $('windUsdBar'), windUsdVal: $('windUsdVal'),
+  windRealTag: $('windRealTag'), windRealBar: $('windRealBar'), windRealVal: $('windRealVal'),
+  windWalclTag: $('windWalclTag'), windWalclBar: $('windWalclBar'), windWalclVal: $('windWalclVal'),
+  windBaaTag: $('windBaaTag'), windBaaBar: $('windBaaBar'), windBaaVal: $('windBaaVal'),
+  windBar: $('windBar'), windNote: $('windNote')
+};
+let __controller = null;
+const progress = (msg)=>{ els.status.textContent = msg; };
+function setTag(el, label, cls){ if(!el) return; el.className="tag "+cls; el.textContent=label; }
+function fmt(n,d=2){ const x=Number(n); return isFinite(x)?x.toFixed(d):"–"; }
+function setBar(el,v){ if(!el) return; const k=el.querySelector(':scope>div')||el; k.style.width=Math.max(0,Math.min(100,Math.round(v)))+"%"; }
+
+const PROXIES = [
+  (u)=>'https://cors.isomorphic-git.org/'+u,
+  (u)=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+];
+const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
+
+let RL_CURRENT_MS = 700;
+const RL_MIN_MS = 650;
+const RL_MAX_MS = 2500;
+let lastCallTs=0;
+
+async function rateLimit(){
+  const now=Date.now();
+  const wait=Math.max(0, RL_CURRENT_MS - (now - lastCallTs));
+  lastCallTs=now + wait;
+  if(wait) await sleep(wait + Math.random()*40);
+}
+
+function bumpBackoff(){ RL_CURRENT_MS = Math.min(RL_MAX_MS, Math.round(RL_CURRENT_MS*1.5)+50); }
+function relaxBackoff(){ RL_CURRENT_MS = Math.max(RL_MIN_MS, Math.round(RL_CURRENT_MS*0.9)); }
+
+async function fetchWithRetry(url, opts={}){
+  const signal = opts.signal;
+  const urls=[url, ...PROXIES.map(p=>p(url))];
+  let lastErr;
+  for(const u of urls){
+    for(let attempt=0; attempt<5; attempt++){
+      try{
+        const r = await fetch(u, {mode:'cors', signal});
+        if(!r.ok){	
+          if (r.status === 429){
+            bumpBackoff();
+            await sleep(600*(attempt+1));
+            continue;
+          }
+          throw new Error('HTTP '+r.status);
+        }
+        const t = await r.text();
+        let j;
+        try { j = JSON.parse(t); } catch(parseErr){ throw new Error('JSON parse fault'); }
+
+        if (j && j.error_code){
+          if (String(j.error_code) === '429' || /too many|rate/i.test(j.error_message||"")){
+            bumpBackoff();
+            await sleep(600*(attempt+1));
+            continue;
+          }
+          throw new Error('FRED fault: '+(j.error_message||j.error_code));
+        }
+        relaxBackoff();
+        return j;
+      }catch(e){
+        lastErr=e;
+        await sleep(250*(attempt+1)+Math.random()*200);
+      }
+    }
+  }
+  throw lastErr||new Error('Ismeretlen fault');
+}
+
+const TTL_MS = 6*60*60*1000;
+function ck(s){ return 'fred:'+s; }
+function cget(s){ try{ const r=localStorage.getItem(ck(s)); if(!r) return null; const o=JSON.parse(r); if(!o||!o.ts||Date.now()-o.ts>TTL_MS) return null; return o.data; }catch{return null;} }
+function cset(s,d){ try{ localStorage.setItem(ck(s), JSON.stringify({ts:Date.now(), data:d})); }catch{} }
+const memCache=new Map();
+
+const ymd = (d) => d.toISOString().slice(0,10);
+
+/* ----- Fred ----- */
+const FRED = {
+  base:"https://api.stlouisfed.org/fred/series/observations",
+  async tail(series, key, n){
+    const k=series+'#tail#'+n;
+    if(memCache.has(k)) return memCache.get(k);
+    const cached=cget(k); if(cached){ memCache.set(k,cached); return cached; }
+    await rateLimit();
+    const url = `${this.base}?series_id=${series}&api_key=${encodeURIComponent(key)}&file_type=json&sort_order=desc&limit=${n}`;
+    const j = await fetchWithRetry(url, { signal: __controller?.signal });
+    const obs=(j.observations||[]).filter(o=>o.value!=="." && o.value!=null);
+    if(!obs.length) throw new Error(`No data: ${series}`);
+    const ordered = obs.reverse();
+    memCache.set(k,ordered); cset(k,ordered); return ordered;
+  },
+  async last(series, key, n=36){
+    const obs=await this.tail(series,key,n);
+    return { last: obs.at(-1), series: obs };
+  },
+  async tailQ(series, key, q={}){
+    const k = series + '#tailQ#' + JSON.stringify(q);
+    if (memCache.has(k)) return memCache.get(k);
+    const cached = cget(k); if (cached){ memCache.set(k, cached); return cached; }
+    await rateLimit();
+    const params = new URLSearchParams();
+    params.set('series_id', series);
+    params.set('api_key', key);
+    params.set('file_type', 'json');
+    params.set('sort_order', q.sort_order || 'desc');
+    if (q.limit) params.set('limit', String(q.limit));
+    if (q.units) params.set('units', q.units);
+    if (q.frequency) params.set('frequency', q.frequency);
+    if (q.aggregation_method) params.set('aggregation_method', q.aggregation_method);
+    if (q.observation_start) params.set('observation_start', q.observation_start);
+    if (q.observation_end) params.set('observation_end', q.observation_end);
+    const url = `${this.base}?${params.toString()}`;
+    const j = await fetchWithRetry(url, { signal: __controller?.signal });
+    const obs=(j.observations||[]).filter(o=>o.value!=='.' && o.value!=null);
+    if(!obs.length) throw new Error(`No data: ${series}`);
+    const ordered = obs.reverse();
+    memCache.set(k, ordered); cset(k, ordered); return ordered;
+  }
+};
+
+async function lastDailySafe(series, key, n, minusDays = 2) {
+  const end = ymd(new Date(Date.now() - minusDays * 864e5));
+  const arr = await FRED.tailQ(series, key, { limit: n, observation_end: end });
+  return { last: arr.at(-1), series: arr };
+}
+
+function mapUSDYoY(p){ return (p<=-2)?25 : (p<=0)?45 : (p<=2)?65 : 85; }
+function mapRealYield(x){ return (x<=1)?35 : (x<=2)?60 : 85; }
+function mapFedBalanceYoY(p){ return (p>=5)?35 : (p>=0)?50 : (p>=-5)?65 : 80; }
+function mapBAASpread(x){ return (x<=1.5)?35 : (x<=2.0)?55 : (x<=3.0)?75 : 90; }
+function mapYC(spread){ if(spread>=50) return 10; if(spread>=0) return 35; const inv=Math.max(-300,spread); return Math.min(95,60+(Math.abs(inv)/50)*15); }
+function mapYC3(spread){ if(spread>=100) return 10; if(spread>=0) return 35; const inv=Math.max(-400,spread); return Math.min(97,65+(Math.abs(inv)/50)*10); }
+function mapSahm(series){ const v=series.map(o=>+o.value).filter(x=>!isNaN(x)); if(v.length<13) return 50; const ma=v.slice(-3).reduce((a,b)=>a+b,0)/3; const priorMin = Math.min(...v.slice(-13,-1)); const d=ma-priorMin; return d<=.1?10:d<=.3?30:d<=.5?55:d<=.8?75:90; }
+function mapCU(x){ return x>80?20:x>78?45:x>75?65:85; }
+function mapFSI(x){ return x<0?20:x<.5?45:x<1?70:90; }
+function mapClaims(x){ return x<=220000?20:x<=260000?45:x<=300000?65:85; }
+function mapVIX(x){ return x<18?25:x<25?50:x<35?70:90; }
+function mapLead(x){ return x>=.3?20:x>=0?40:x>=-.3?65:85; }
+function mapPayYoY(x){ return x>=1.5?25:x>=.5?45:x>=0?60:85; }
+function mapSent(x){ return x>=85?15:x>=75?30:x>=70?45:x>=65?65:80; }
+
+
+// --- Weights --- //
+const DEFAULT_WEIGHTS = {
+  yc: .14,      // 10Y–2Y
+  yc3: .14,     // 10Y–3M
+  sahm: .20,    // Sahm-szabály
+  cu: .11,      // Capacity Utilization
+  fsi: .08,     // STLFSI2
+  claims: .08,  // ICSA (4w MA)
+  vix: .05,     // VIX
+  lei: .07,     // USSLIND
+  payems: .08,  // Payrolls YoY
+  sent: .05     // UMich Sentiment
+};
+
+function loadWeights(){
+  try{ const w=JSON.parse(localStorage.getItem('weights_v1')||'null'); if(!w) return DEFAULT_WEIGHTS;
+    const keys=Object.keys(DEFAULT_WEIGHTS); const ok=keys.every(k=>typeof w[k]==='number' && w[k]>=0);
+    if(!ok) return DEFAULT_WEIGHTS;
+    const sum=keys.reduce((a,k)=>a+w[k],0); if(sum<=0) return DEFAULT_WEIGHTS;
+    const norm={}; keys.forEach(k=>norm[k]=w[k]/sum); return norm;
+  }catch{ return DEFAULT_WEIGHTS; }
+}
+function saveWeights(w){ try{ localStorage.setItem('weights_v1', JSON.stringify(w)); }catch{} }
+function weightsToText(w){
+  const pct = (k)=>Math.round((w[k]||0)*100)+'%';
+  return `Weights in the score: 10Y–2Y ${pct('yc')} • 10Y–3M ${pct('yc3')} • Sahm ${pct('sahm')} • Capacity ${pct('cu')} • FSI ${pct('fsi')} • Claims ${pct('claims')} • VIX ${pct('vix')} • LEI ${pct('lei')} • Payrolls ${pct('payems')} • Sentiment ${pct('sent')}`;
+}
+
+const CG_TTL = 30*60*1000; // 30 perc
+function cgGet(){ try{ const r=localStorage.getItem('cg:global'); if(!r) return null; const o=JSON.parse(r); if(!o||!o.ts||Date.now()-o.ts>CG_TTL) return null; return o.data; }catch{return null;} }
+function cgSet(d){ try{ localStorage.setItem('cg:global', JSON.stringify({ts:Date.now(), data:d})); }catch{} }
+
+async function fetchDominance(){
+  try{
+    const cached = cgGet();
+    if(cached!=null){ return cached; }
+    const g = await fetchWithRetry('https://api.coingecko.com/api/v3/global');
+    const dom = g?.data?.market_cap_percentage?.btc ?? null;
+    if(dom!=null) cgSet(dom);
+    return dom;
+  }catch{ return null; }
+}
+
+async function fetchCryptoWind(key, {
+  concurrency = (window.WIND_CONCURRENCY || 2),
+  retries     = (window.WIND_RETRIES || 3)
+} = {}) {
+  progress(`Crypto wind…`);
+
+  const vals = { usd: null, real: null, walcl: null, baa: null };
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function withRetry(label, fn){
+    let wait = 1000;
+    for (let i=0; i<retries; i++){
+      try{
+        progress(`Crypto wind: ${label}…`);
+        return await fn();
+      }catch(err){
+        if (__controller?.signal?.aborted) throw err;
+        if (i === retries - 1) throw err;
+        await sleep(wait * (1 + Math.random()*0.5)); // jitter
+        wait = Math.min(5000, Math.round(wait*1.8));
+      }
+    }
+  }
+
+  function renderPartial(){
+    // USD YoY (DTWEXBGS)
+    if (vals.usd && vals.usd.length>=4){
+      const l=+vals.usd.at(-1).value, r=mapUSDYoY(l);
+      els.windUsdVal.textContent = `${fmt(l,2)}%`;
+      setBar(els.windUsdBar, r);
+      setTag(els.windUsdTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+    // 10Y Real (DFII10)
+    if (vals.real && vals.real.last && vals.real.series?.length>=4){
+      const l=+vals.real.last.value, r=mapRealYield(l);
+      els.windRealVal.textContent = `${fmt(l,2)}%`;
+      setBar(els.windRealBar, r);
+      setTag(els.windRealTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+    // WALCL YoY
+    if (vals.walcl && vals.walcl.length>=4){
+      const l=+vals.walcl.at(-1).value, r=mapFedBalanceYoY(l);
+      els.windWalclVal.textContent = `${fmt(l,2)}%`;
+      setBar(els.windWalclBar, r);
+      setTag(els.windWalclTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+    // BAA–10Y spread
+    if (vals.baa && vals.baa.length>=4){
+      const l=+vals.baa.at(-1).value, r=mapBAASpread(l);
+      els.windBaaVal.textContent = `${fmt(l,2)}%`;
+      setBar(els.windBaaBar, r);
+      setTag(els.windBaaTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+
+    const parts = [];
+    if (vals.usd)   parts.push(mapUSDYoY(+vals.usd.at(-1).value));
+    if (vals.real)  parts.push(mapRealYield(+vals.real.last?.value));
+    if (vals.walcl) parts.push(mapFedBalanceYoY(+vals.walcl.at(-1).value));
+    if (vals.baa)   parts.push(mapBAASpread(+vals.baa.at(-1).value));
+
+    if (parts.length){
+      const wind = Math.max(0, Math.min(100, Math.round(parts.reduce((a,b)=>a+b,0) / parts.length)));
+      setBar(els.windBar, wind);
+      els.windNote.textContent =
+        wind<40 ? "Rather Tailwind: Weakening USD / Low Real Rate / Expanding Balance / Low Spread."
+        : wind>60 ? "Rather Headwind: Strong USD / High Real Rame / Scarring Scale / High Spread."
+        : "Mixed wind direction.";
+    }else{
+      els.windNote.textContent = "There is not enough data to calculate Crypto wind.";
+    }
+  }
+
+  const jobs = [
+    ["USD (DTWEXBGS)", async()=>{ await rateLimit(); vals.usd   = await FRED.tailQ("DTWEXBGS", key, {frequency:"m", aggregation_method:"avg", units:"pc1", limit:15}); }],
+    ["Real (DFII10)",  async()=>{ await rateLimit(); vals.real  = await lastDailySafe("DFII10", key, 60, 2); }],
+    ["WALCL YoY",      async()=>{ await rateLimit(); vals.walcl = await FRED.tailQ("WALCL", key, {frequency:"w", units:"pc1", limit:60}); }],
+    ["BAA–10Y",        async()=>{ await rateLimit(); vals.baa   = await FRED.tailQ("BAA10Y", key, {frequency:"m", aggregation_method:"avg", limit:24}); }],
+  ];
+
+  const queue = jobs.map(([label,fn]) => async ()=> {
+    try{ await withRetry(label, fn); }
+    catch{}
+    finally{ try{ renderPartial(); }catch{} }
+  });
+
+  async function runQueue(fns, limit){
+    const list = fns.slice();
+    const workers = Array.from({length: Math.min(limit, list.length)}, () => (async function worker(){
+      while(list.length){
+        const job = list.shift();
+        try{ await job(); }catch{}
+      }
+    })());
+    await Promise.allSettled(workers);
+  }
+
+  try{
+    await runQueue(queue, concurrency);
+    renderPartial();
+  }catch{
+    els.windNote.textContent = "Error retrieving Crypto wind.";
+  }
+}
+
+async function fetchCrypto(){
+  progress("Crypto (Binance) …");
+  try{
+    const data = await fetchWithRetry('https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d&limit=1000');
+    const closes = Array.isArray(data) ? data.map(r => Number(r[4])).filter(n => Number.isFinite(n)) : [];
+
+    if (closes.length < 200){
+      els.btcEmaStat.textContent = "Little data (EMA).";
+      return;
+    }
+
+    const ema = (arr, p) => {
+      const k = 2/(p+1);
+      let e = arr[0];
+      for (let i = 1; i < arr.length; i++) e = arr[i]*k + e*(1-k);
+      return e;
+    };
+
+    const last  = closes[closes.length - 1];
+    const e50   = ema(closes, 50);
+    const e200  = ema(closes, 200);
+    const cross = e50 > e200 ? "Golden cross (bullish)" : "Death cross (bearish)";
+    const usd   = (n, d=0) => Number(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+
+    els.btcEmaStat.textContent = `BTC: $${usd(last,0)} | EMA50: $${usd(e50,0)} | EMA200: $${usd(e200,0)} — ${cross}`;
+
+    const vix = window.__lastVIX ?? null;
+    els.btcVix.textContent = vix!=null ? fmt(vix,1) : "–";
+
+    progress("Crypto: dominance…");
+    const dom = await fetchDominance();
+    els.btcDom.textContent = dom!=null ? `${fmt(dom,1)}%` : "–";
+
+    const comp = (e50>e200?20:70)
+               + (dom!=null ? (dom<50?20:60) : 40)
+               + (vix!=null ? (vix<20?20:(vix<30?40:70)) : 50);
+    const risk = Math.max(0, Math.min(100, Math.round(comp/3)));
+
+    setBar(els.cryptoBar, risk);
+    els.cryptoNote.textContent =
+      risk<40 ? "Rather Risk (BTC EMA + Low Vix + Low Dominance)" :
+      risk>60 ? "Rather Risk-off (BTC EMA + High Vix + High Dominance)" :
+                "Mixed signals.";
+  }catch{
+    els.btcEmaStat.textContent = "Error in the Binance Request.";
+  }
+}
+
+function yoySeries(vals){ const out=[]; for(let i=13;i<vals.length;i++) out.push((vals[i]/vals[i-12]-1)*100); return out; }
+function yoyLag(vals, lag){ const out=[]; for(let i=lag;i<vals.length;i++) out.push((vals[i]/vals[i-lag]-1)*100); return out; }
+function rowHTML(name, latest, prev1, prev2, prev3, dir, impact, note){
+  const tag=impact==="Positive"?"ok":impact==="Negative"?"bad":"warn";
+  const dataAttr = name.replace(/"/g,'\"');
+  return `<tr data-name="${dataAttr}"><td>${name}</td><td><strong>${latest}</strong></td><td>${prev1}</td><td>${prev2}</td><td>${prev3}</td><td>${dir}</td><td><span class="tag ${tag}">${impact}</span></td><td class="small muted">${note||""}</td></tr>`;
+}
+function trendImpact(delta, posIfDown=true, eps=0.1){
+  if(isNaN(delta)) return {impact:"Neutral",dir:"→"};
+  if(Math.abs(delta)<eps) return {impact:"Neutral",dir:"→"};
+  const up=delta>0; return posIfDown?{impact:up?"Negative":"Positive",dir:up?"↑":"↓"}:{impact:up?"Positive":"Negative",dir:up?"↑":"↓"};
+}
+
+const MACRO_COOLDOWN_MS = 10*60*1000; // 10 perc
+function macroRecentlyFilled(){
+  try{
+    const ts = +localStorage.getItem('macro_last_ts')||0;
+    return (Date.now()-ts) < MACRO_COOLDOWN_MS;
+  }catch{return false;}
+}
+
+async function fillMacroTable(key, {force=false}={}) {
+  const BP_LABEL = "Building Permits (SAAR)";
+  const macroRunId = (window.__macroRunId = (window.__macroRunId||0) + 1);
+  const PAYEMS_MONTHS  = Number(window.MACRO_PAYEMS_MONTHS  ?? 60);
+  const PERMIT_POINTS  = Number(window.MACRO_PERMIT_POINTS  ?? 24);
+  const COOL_MS = window.MACRO_COOLDOWN_MS || 10*60*1000;
+  const CONCURRENCY = window.MACRO_CONCURRENCY || 4; // állítsd 3–5 közé
+  const RETRIES = 3;
+
+  if (!force && els.macroBody.children.length>0 && macroRecentlyFilled()){
+    const left = Math.max(0, COOL_MS - (Date.now() - (+localStorage.getItem('macro_last_ts')||0)));
+    els.macroNote.textContent = `Macros from Cache (${Math.ceil(left/60000)} will be updated again or re-updated with ⇧ shift immediately).`;
+    return;
+  }
+
+  els.macroBody.innerHTML = "";
+  els.macroNote.textContent = `Loading with concurrency=${CONCURRENCY}…`;
+
+  const sleep = ms => new Promise(r=>setTimeout(r, ms));
+  async function withRetry(fn){
+    let wait = 1000;
+    for(let i=0;i<RETRIES;i++){
+      try{ return await fn(); }
+      catch(e){
+        if (i===RETRIES-1) throw e;
+        await sleep(wait * (1 + Math.random()*0.5));
+        wait *= 2;
+      }
+    }
+  }
+  function need4(v){ if(!v || v.length<4) throw new Error("not-enough"); return v; }
+
+  async function addRow(label, builder){
+    if (window.__macroRunId !== macroRunId) return;
+    progress("Macros: "+label+"…");
+    try{
+      const html = await withRetry(builder);
+      if (window.__macroRunId !== macroRunId) return;
+      const m = html.match(/data-name="([^"]+)"/);
+      const id = m ? m[1] : label;
+      const old = els.macroBody.querySelector(`tr[data-name="${CSS.escape(id)}"]`);
+      if (old){ old.insertAdjacentHTML('afterend', html); old.remove(); }
+      else { els.macroBody.insertAdjacentHTML('beforeend', html); }
+    }catch{
+      const htmlErr = rowHTML(label,"–","–","–","–","→","Neutral","No data / fault");
+      const old = els.macroBody.querySelector(`tr[data-name="${CSS.escape(label)}"]`);
+      if (old){ old.insertAdjacentHTML('afterend', htmlErr); old.remove(); }
+      else { els.macroBody.insertAdjacentHTML('beforeend', htmlErr); }
+    }
+  }
+
+  const ORDER = [
+    "CPI YoY","Core CPI YoY","PCE YoY","Core PCE YoY","PPI YoY","M2 YoY",
+    "NFCI (pénzügyi feltételek)","ANFCI (adjusted)","Industrial Production YoY",
+    "Retail Sales YoY","Unemployment Rate","Capacity Utilization",
+    "Financial Stress (STLFSI2)","Initial Claims (IC4WSA)","VIX","LEI (USSLIND)",
+    "Payrolls YoY (PAYEMS)","Building Permits (SAAR)","S&P 500 YoY",
+    "USD Broad Index YoY (DTWEXBGS)","10Y Real Yield (DFII10)",
+    "Fed Balance Sheet YoY (WALCL)","BAA–10Y Spread (BAA10Y)"
+  ];
+  ORDER.forEach(name=>{
+    els.macroBody.insertAdjacentHTML('beforeend',
+      rowHTML(name,"…","…","…","…","→","Neutral","Loading…"));
+  });
+
+  const jobs = [
+    ["CPI YoY", async()=>{
+      const v=need4((await FRED.tailQ("CPIAUCSL",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("CPI YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Lower inflation → looser cover.");
+    }],
+    ["Core CPI YoY", async()=>{
+      const v=need4((await FRED.tailQ("CPILFESL",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("Core CPI YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Sticky core inflation.");
+    }],
+    ["PCE YoY", async()=>{
+      const v=need4((await FRED.tailQ("PCEPI",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("PCE YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Fed’s preferred gauge.");
+    }],
+    ["Core PCE YoY", async()=>{
+      const v=need4((await FRED.tailQ("PCEPILFE",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("Core PCE YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Core PCE – sticky.");
+    }],
+    ["PPI YoY", async()=>{
+      const v=need4((await FRED.tailQ("PPIACO",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("PPI YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Producer prices lead CPI.");
+    }],
+    ["M2 YoY", async()=>{
+      const v=need4((await FRED.tailQ("M2SL",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,false,.05);
+      return rowHTML("M2 YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"More liquidity → risk-on.");
+    }],
+    ["NFCI (pénzügyi feltételek)", async()=>{
+      const v=need4((await FRED.tail("NFCI",key,16)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,0.02);
+      return rowHTML("NFCI (pénzügyi feltételek)",fmt(l,3),fmt(p1,3),fmt(p2,3),fmt(p3,3),ci.dir,ci.impact,"↑ tighter / ↓ looser.");
+    }],
+    ["ANFCI (adjusted)", async()=>{
+      const v=need4((await FRED.tail("ANFCI",key,16)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,0.02);
+      return rowHTML("ANFCI (adjusted)",fmt(l,3),fmt(p1,3),fmt(p2,3),fmt(p3,3),ci.dir,ci.impact,"Alt. confirmation.");
+    }],
+    ["Industrial Production YoY", async()=>{
+      const v=need4((await FRED.tailQ("INDPRO",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,false,.05);
+      return rowHTML("Industrial Production YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Real economy.");
+    }],
+    ["Retail Sales YoY", async()=>{
+      const v=need4((await FRED.tailQ("RSAFS",key,{units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,false,.1);
+      return rowHTML("Retail Sales YoY",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Consumption strength.");
+    }],
+    ["Unemployment Rate", async()=>{
+      const v=need4((await FRED.tail("UNRATE",key,12)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("Unemployment Rate",fmt(l,1)+"%",fmt(p1,1)+"%",fmt(p2,1)+"%",fmt(p3,1)+"%",ci.dir,ci.impact,"Interpret with Sahm.");
+    }],
+    ["Capacity Utilization", async()=>{
+      const v=need4((await FRED.tail("CUMFNS",key,12)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("Capacity Utilization",fmt(l,1)+"%",fmt(p1,1)+"%",fmt(p2,1)+"%",fmt(p3,1)+"%",ci.dir,ci.impact,">80% overheating.");
+    }],
+    ["Financial Stress (STLFSI2)", async()=>{
+      const v=need4((await FRED.tail("STLFSI2",key,16)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,0.05);
+      return rowHTML("Financial Stress (STLFSI2)",fmt(l,2),fmt(p1,2),fmt(p2,2),fmt(p3,2),ci.dir,ci.impact,"Risk aversion proxy.");
+    }],
+    ["Initial Claims (IC4WSA)", async()=>{
+      const v=need4((await FRED.tail("IC4WSA",key,16)).map(o=>parseInt(o.value,10)).filter(Number.isFinite));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,1000);
+      return rowHTML("Initial Claims (IC4WSA)",Math.round(l).toLocaleString(),Math.round(p1).toLocaleString(),Math.round(p2).toLocaleString(),Math.round(p3).toLocaleString(),ci.dir,ci.impact,"4-week SA series.");
+    }],
+    ["VIX", async()=>{
+      const v=need4((await FRED.tail("VIXCLS",key,16)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,0.5);
+      window.__lastVIX = l;
+      return rowHTML("VIX",fmt(l,1),fmt(p1,1),fmt(p2,1),fmt(p3,1),ci.dir,ci.impact,"Risk appetite.");
+    }],
+    ["LEI (USSLIND)", async()=>{
+      const v=need4((await FRED.tail("USSLIND",key,16)).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,0.03);
+      return rowHTML("LEI (USSLIND)",fmt(l,2),fmt(p1,2),fmt(p2,2),fmt(p3,2),ci.dir,ci.impact,"Leading index.");
+    }],
+    ["Payrolls YoY (PAYEMS)", async()=>{
+  const months = Number.isFinite(PAYEMS_MONTHS) ? PAYEMS_MONTHS : 36;
+  const v = (await FRED.tail("PAYEMS", key, months)).map(o => +o.value);
+  if (v.length < 16) throw new Error("not-enough");
+  const y = [];
+  for (let i = 13; i < v.length; i++) y.push((v[i]/v[i-12] - 1) * 100);
+  const y4 = need4(y);
+  const [p3, p2, p1, l] = y4.slice(-4);
+  const ci = trendImpact(l - p1, false, .1);
+  return rowHTML(
+    "Payrolls YoY (PAYEMS)",
+    `${fmt(l,2)}%`, `${fmt(p1,2)}%`, `${fmt(p2,2)}%`, `${fmt(p3,2)}%`,
+    ci.dir, ci.impact, "Labor market power."
+  );
+}],
+
+["Building Permits (SAAR)", async()=>{
+  const basePts = Number.isFinite(window.MACRO_PERMIT_POINTS) ? window.MACRO_PERMIT_POINTS : 36;
+
+  const fetchClean = async (seriesId, limit) => {
+    const raw = await FRED.tail(seriesId, key, limit);
+    return raw.map(o => parseFloat(o.value)).filter(Number.isFinite);
+  };
+
+  let note = "Housing lead. SAAR (thousand units).";
+  let v = await fetchClean("PERMIT", Math.max(basePts, 36));
+
+  if (v.length < 4) v = await fetchClean("PERMIT", Math.max(basePts*2, 72));
+  if (v.length < 4) {
+    const rawQ = await FRED.tailQ("PERMIT", key, { frequency:"m", aggregation_method:"eop", limit: Math.max(basePts*3, 108) });
+    v = rawQ.map(o => parseFloat(o.value)).filter(Number.isFinite);
+  }
+  if (v.length < 4) {
+    const rawNSA = await FRED.tailQ("PERMITNSA", key, { frequency:"m", aggregation_method:"eop", limit: Math.max(basePts*3, 108) });
+    v = rawNSA.map(o => parseFloat(o.value)).filter(Number.isFinite);
+    if (v.length >= 4) note = "NSA fallback (PERMITNSA).";
+  }
+
+  const v4 = (v.length >= 4) ? v.slice(-4) : need4(v);
+  const [p3, p2, p1, l] = v4;
+  const ci = trendImpact(l - p1, false, 10);
+
+  return rowHTML(
+    "Building Permits (SAAR)",  // <<< fontos: egyezzen az ORDER-rel
+    fmt(l,0), fmt(p1,0), fmt(p2,0), fmt(p3,0),
+    ci.dir, ci.impact, note
+  );
+}],
+
+    ["S&P 500 YoY", async()=>{
+      const v=need4((await FRED.tailQ("SP500",key,{frequency:"m",aggregation_method:"eop",units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,false,.3);
+      return rowHTML("S&P 500 YoY",`${fmt(l,1)}%`,`${fmt(p1,1)}%`,`${fmt(p2,1)}%`,`${fmt(p3,1)}%`,ci.dir,ci.impact,"Monthly (EOP), pc1.");
+    }],
+    ["USD Broad Index YoY (DTWEXBGS)", async()=>{
+      const v=need4((await FRED.tailQ("DTWEXBGS",key,{frequency:"m",aggregation_method:"avg",units:"pc1",limit:8})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.1);
+      return rowHTML("USD Broad Index YoY (DTWEXBGS)",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Strong USD = risk-off.");
+    }],
+    ["10Y Real Yield (DFII10)", async()=>{
+      const obj = await withRetry(()=>lastDailySafe("DFII10",key,20,2));
+      const s=need4(obj.series.map(o=>+o.value));
+      const [p3,p2,p1,l]=s.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("10Y Real Yield (DFII10)",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"High real → negative.");
+    }],
+    ["Fed Balance Sheet YoY (WALCL)", async()=>{
+      const v=need4((await FRED.tailQ("WALCL",key,{frequency:"w",units:"pc1",limit:16})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,false,.1);
+      return rowHTML("Fed Balance Sheet YoY (WALCL)",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Liquidity proxy.");
+    }],
+    ["BAA–10Y Spread (BAA10Y)", async()=>{
+      const v=need4((await FRED.tailQ("BAA10Y",key,{frequency:"m",aggregation_method:"avg",limit:16})).map(o=>+o.value));
+      const [p3,p2,p1,l]=v.slice(-4); const ci=trendImpact(l-p1,true,.05);
+      return rowHTML("BAA–10Y Spread (BAA10Y)",`${fmt(l,2)}%`,`${fmt(p1,2)}%`,`${fmt(p2,2)}%`,`${fmt(p3,2)}%`,ci.dir,ci.impact,"Credit stress.");
+    }],
+  ];
+
+  const queue = jobs.map(([label,fn]) => async ()=> addRow(label, fn));
+  async function runQueue(fns, limit){
+    const list = fns.slice(); // másolat
+    const workers = Array.from({length: Math.min(limit, list.length)}, ()=> (async function worker(){
+      while(list.length){
+        const job = list.shift();
+        try{ await job(); }catch{}
+      }
+    })());
+    await Promise.allSettled(workers);
+  }
+  await runQueue(queue, CONCURRENCY);
+
+  const tags=[...document.querySelectorAll('#macroBody .tag')].map(x=>x.textContent);
+  const score=tags.reduce((a,x)=>a+(x==="Positive"?1:x==="Neutral"?0:-1),0);
+  els.macroNote.textContent = score>=4 ? "Overall: more positive signals – risk-on tone." : score<=-4 ? "Overall: more negative signals – heightened caution." : "Overall: mixed signals – PCE/CPI & Fed path are key.";
+  try{ localStorage.setItem('macro_last_ts', String(Date.now())); }catch{}
+}
+
+function capTableHeightToRows(tbl, rows=10){
+  try{
+    const thead = tbl.querySelector('thead');
+    const tbody = tbl.querySelector('tbody');
+    const wrap  = tbl.closest('.scroll-wrap');
+    if(!thead || !tbody || !wrap) return;
+    const rs = Array.from(tbody.rows);
+    if(!rs.length) return;
+    const n = Math.min(rows, rs.length);
+    const hBody = rs.slice(0, n).reduce((s,tr)=>s+tr.getBoundingClientRect().height,0);
+    const hHead = thead.getBoundingClientRect().height;
+    wrap.style.maxHeight = Math.ceil(hHead + hBody + 4) + 'px';
+    wrap.style.overflowY = rs.length > rows ? 'auto' : 'hidden';
+  }catch{}
+}
+
+async function fillUpcomingReleases(key){
+  const runId = (window.__upcomingRunId = (window.__upcomingRunId||0) + 1);
+
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  async function withRetry(label, fn, {retries=3, base=800}={}){
+    let wait = base;
+    for(let i=0;i<retries;i++){
+      try{
+        progress(`Next macro data… (${label}${i?` retry ${i}`:''})`);
+        const res = await fn();
+        return res;
+      }catch(e){
+        if (i === retries-1) throw e;
+        await sleep(wait * (1 + Math.random()*0.5)); // jitter
+        wait = Math.min(6000, Math.round(wait*1.8));
+      }
+    }
+  }
+  async function withTimeout(promise, ms=12000){
+    let to;
+    try{
+      return await Promise.race([
+        promise,
+        new Promise((_,rej)=>{ to=setTimeout(()=>rej(new Error('timeout')), ms); })
+      ]);
+    }finally{ clearTimeout(to); }
+  }
+
+  try{
+    progress('Next macro data…');
+
+    const start = ymd(new Date());
+    const end   = ymd(new Date(Date.now() + 7*864e5));
+    const cacheKey = `releases:${start}|${end}`;
+
+    let arr = cget(cacheKey);
+
+    if (!arr){
+      await rateLimit();
+      const params = new URLSearchParams({
+        api_key: key,
+        file_type: 'json',
+        realtime_start: start,
+        realtime_end: end,
+        include_release_dates_with_no_data: 'true',
+        order_by: 'release_date',
+        sort_order: 'asc',
+        limit: '1000'
+      });
+      const url = `https://api.stlouisfed.org/fred/releases/dates?${params.toString()}`;
+
+      const j = await withRetry('releases/dates', () =>
+        withTimeout(fetchWithRetry(url, { signal: __controller?.signal }), 12000)
+      );
+
+      arr = (j.release_dates || [])
+        .filter(x => x?.date && x?.release_id && x?.release_name)
+        .filter(x => x.date >= start && x.date <= end);
+
+      try{ cset(cacheKey, arr); }catch{}
+    }
+
+    if (window.__upcomingRunId !== runId) return;
+
+    if (!arr || !arr.length){
+      els.upcomingBody.innerHTML = '';
+      els.upcomingNote.textContent = 'No announced event in the next 7 days (or not yet published by the source).';
+      const tbl = document.getElementById('upcomingTable');
+      if (tbl) capTableHeightToRows(tbl, 10);
+      progress('Ready (releases).');
+      return;
+    }
+
+    const rows = arr.map(r=>{
+      const link = `https://fred.stlouisfed.org/release?rid=${encodeURIComponent(r.release_id)}`;
+      return `<tr><td>${r.date}</td><td><a href="${link}" target="_blank" rel="noopener">${r.release_name}</a></td></tr>`;
+    });
+
+    els.upcomingBody.innerHTML = rows.join('');
+    els.upcomingNote.textContent = `Period: ${start} → ${end}. Source: FRED releases/dates.`;
+
+    const tbl = document.getElementById('upcomingTable');
+    if (tbl) capTableHeightToRows(tbl, 10);
+
+    progress('Ready (releases).');
+
+  }catch(e){
+    if (window.__upcomingRunId !== runId) return;
+    els.upcomingBody.innerHTML = '';
+    els.upcomingNote.textContent = 'Error with the “releases/dates” request.';
+    const tbl = document.getElementById('upcomingTable');
+    if (tbl) capTableHeightToRows(tbl, 10);
+    progress('Releases failed, continue…');
+  }
+}
+
+function renderComponents(got){
+  if (got.T10Y2Y){
+    const l = +got.T10Y2Y.last.value;
+    const risk = mapYC(l);
+    els.ycVal.textContent = fmt(l,2);
+    setBar(els.ycBar, risk);
+    setTag(els.ycTag, risk<40?"Positive":risk>60?"Negative":"Neutral", risk<40?"ok":risk>60?"bad":"warn");
+  }
+  if (got.T10Y3M){
+    const l = +got.T10Y3M.last.value;
+    const risk = mapYC3(l);
+    els.yc3mVal.textContent = fmt(l,2);
+    setBar(els.yc3mBar, risk);
+    setTag(els.yc3mTag, risk<40?"Positive":risk>60?"Negative":"Neutral", risk<40?"ok":risk>60?"bad":"warn");
+  }
+  if (got.UNRATE){
+    const risk = mapSahm(got.UNRATE.series);
+    els.sahmVal.textContent = fmt(+got.UNRATE.last.value,1)+"%";
+    setBar(els.sahmBar, risk);
+    setTag(els.sahmTag, risk<40?"Positive":risk>60?"Negative":"Neutral", risk<40?"ok":risk>60?"bad":"warn");
+  }
+  if (got.CUMFNS){
+    const l=+got.CUMFNS.last.value, r=mapCU(l);
+    els.cuVal.textContent = fmt(l,1)+"%"; setBar(els.cuBar,r);
+    setTag(els.cuTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+  }
+  if (got.STLFSI2){
+    const l=+got.STLFSI2.last.value, r=mapFSI(l);
+    els.fsiVal.textContent = fmt(l,2); setBar(els.fsiBar,r);
+    setTag(els.fsiTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+  }
+  if (got.ICSA){
+    const s=got.ICSA.series.map(o=>+o.value).slice(-4);
+    if (s.length===4){
+      const l = s.reduce((a,b)=>a+b,0)/4;
+      const r = mapClaims(l);
+      els.claimsVal.textContent = Math.round(l).toLocaleString();
+      setBar(els.claimsBar,r);
+      setTag(els.claimsTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+  }
+  if (got.VIXCLS){
+    const l=+got.VIXCLS.last.value, r=mapVIX(l);
+    els.vixVal.textContent = fmt(l,1); setBar(els.vixBar,r);
+    setTag(els.vixTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    window.__lastVIX = l;
+  }
+  if (got.USSLIND){
+    const l=+got.USSLIND.last.value, r=mapLead(l);
+    els.leadVal.textContent = fmt(l,2); setBar(els.leadBar,r);
+    setTag(els.leadTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+  }
+  if (got.PAYEMS){
+    const arr = got.PAYEMS.series.map(o=>+o.value);
+    if (arr.length>=13){
+      const yoy = (arr.at(-1)/arr.at(-13)-1)*100;
+      const r=mapPayYoY(yoy);
+      els.payemsVal.textContent = fmt(yoy,2)+"%"; setBar(els.payemsBar,r);
+      setTag(els.payemsTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+    }
+  }
+  if (got.UMCSENT){
+    const l=+got.UMCSENT.last.value, r=mapSent(l);
+    els.sentVal.textContent = fmt(l,1); setBar(els.sentBar,r);
+    setTag(els.sentTag, r<40?"Positive":r>60?"Negative":"Neutral", r<40?"ok":r>60?"bad":"warn");
+  }
+
+  const W = loadWeights();
+  const items = [
+    ['yc',     got.T10Y2Y ? mapYC(+got.T10Y2Y.last.value) : null],
+    ['yc3',    got.T10Y3M ? mapYC3(+got.T10Y3M.last.value) : null],
+    ['sahm',   got.UNRATE ? mapSahm(got.UNRATE.series) : null],
+    ['cu',     got.CUMFNS ? mapCU(+got.CUMFNS.last.value) : null],
+    ['fsi',    got.STLFSI2? mapFSI(+got.STLFSI2.last.value) : null],
+    ['claims', (got.ICSA   && got.ICSA.series.length>=4) ? mapClaims(got.ICSA.series.slice(-4).map(o=>+o.value).reduce((a,b)=>a+b,0)/4) : null],
+    ['vix',    got.VIXCLS ? mapVIX(+got.VIXCLS.last.value) : null],
+    ['lei',    got.USSLIND? mapLead(+got.USSLIND.last.value) : null],
+    ['payems', (got.PAYEMS && got.PAYEMS.series.length>=13) ? mapPayYoY((+got.PAYEMS.series.at(-1).value / +got.PAYEMS.series.at(-13).value - 1)*100) : null],
+    ['sent',   got.UMCSENT? mapSent(+got.UMCSENT.last.value) : null],
+  ];
+  const used = items.filter(([,v])=>v!=null);
+  if (used.length){
+    const wsum = used.reduce((a,[k])=>a+(W[k]||0),0) || 1;
+    const val = Math.round( used.reduce((a,[k,v])=>a+v*(W[k]||0),0) / wsum );
+    const total = Math.max(0, Math.min(100, val));
+    setBar(els.totalBar, total);
+    els.score.textContent = String(total);
+    setTag(els.riskTag, total<40?"Positive":total>60?"Negative":"Neutral", total<40?"ok":total>60?"bad":"warn");
+    els.updated.textContent = "Updated: "+new Date().toLocaleString();
+  }
+}
+
+async function fetchComponentsParallel(key, got, {
+  concurrency = (window.COMP_CONCURRENCY || 4),
+  retries     = (window.COMP_RETRIES || 3)
+} = {}) {
+
+  async function withRetry(label, fn){
+    let wait = 1000;
+    for (let i=0; i<retries; i++){
+      try{
+        progress(`Components: ${label}…`);
+        const res = await fn();
+        return res;
+      }catch(err){
+        if (__controller?.signal?.aborted) throw err;
+        if (i === retries - 1) throw err;
+        await sleep(wait * (1 + Math.random()*0.5));
+        wait = Math.min(5000, Math.round(wait*1.8));
+      }
+    }
+  }
+
+  const jobs = [
+    ["DGS10",    async()=>{ await rateLimit(); got.DGS10   = await lastDailySafe('DGS10',   key, 60, 2); }],
+    ["T10Y2Y",   async()=>{ await rateLimit(); got.T10Y2Y  = await lastDailySafe('T10Y2Y',  key, 60, 2); }],
+    ["T10Y3M",   async()=>{ await rateLimit(); got.T10Y3M  = await lastDailySafe('T10Y3M',  key, 60, 2); }],
+    ["VIXCLS",   async()=>{ await rateLimit(); got.VIXCLS  = await lastDailySafe('VIXCLS',  key, 45, 2); }],
+    ["UNRATE",   async()=>{ await rateLimit(); got.UNRATE  = await FRED.last('UNRATE',  key, 36); }],
+    ["CUMFNS",   async()=>{ await rateLimit(); got.CUMFNS  = await FRED.last('CUMFNS',  key, 30); }],
+    ["STLFSI2",  async()=>{ await rateLimit(); got.STLFSI2 = await FRED.last('STLFSI2', key, 60); }],
+    ["ICSA",     async()=>{ await rateLimit(); got.ICSA    = await FRED.last('ICSA',    key, 12); }],
+    ["USSLIND",  async()=>{ await rateLimit(); got.USSLIND = await FRED.last('USSLIND', key, 24); }],
+    ["PAYEMS",   async()=>{ await rateLimit(); got.PAYEMS  = await FRED.last('PAYEMS',  key, 30); }],
+    ["UMCSENT",  async()=>{ await rateLimit(); got.UMCSENT = await FRED.last('UMCSENT', key, 24); }],
+  ];
+
+  const queue = jobs.map(([label,fn]) => async () => {
+    try{
+      await withRetry(label, fn);
+    }catch{
+      const k = label;
+      try{ got[k] = null; }catch{}
+    }finally{
+      try{ renderComponents(got); }catch{}
+    }
+  });
+
+  async function runQueue(fns, limit){
+    const list = fns.slice();
+    const workers = Array.from({length: Math.min(limit, list.length)}, () => (async function worker(){
+      while(list.length){
+        const job = list.shift();
+        try{ await job(); }catch{}
+      }
+    })());
+    await Promise.allSettled(workers);
+  }
+
+  await runQueue(queue, concurrency);
+}
+
+/* Main */
+
+async function run(opts = {}) {
+  if (__controller) { try { __controller.abort(); } catch {} }
+  __controller = new AbortController();
+  if (window.__runInFlight) { progress('Update in progress…'); return; }
+  window.__runInFlight = true;
+
+  const key = els.apiKey.value.trim();
+  if (!key) { progress("Give me a Fred Api key."); window.__runInFlight = false; return; }
+
+  const PAUSE = Number(window.SEQ_PAUSE_MS ?? 2000);
+  const pause = () => sleep(PAUSE);
+
+  async function step(label, fn) {
+    if (__controller?.signal?.aborted) throw new Error('Aborted');
+    progress(label + '…');
+    try {
+      await fn();
+    } catch (e) {
+      console.error(label + ' step failed:', e);
+      progress(label + ' failed, continue…');
+    }
+    await pause();
+  }
+
+  progress("Fred: Basic lines…");
+  try {
+    memCache.clear();
+    const got = {};
+    await fetchComponentsParallel(key, got);
+
+    function classify(v){ return { l: v<40?"Positive":v>60?"Negative":"Neutral", c: v<40?"ok":v>60?"bad":"warn" }; }
+
+    let ycRisk=50, yc3Risk=50;
+    if (got.DGS10 && got.T10Y2Y){
+      const y10 = +got.DGS10.last.value;
+      const spr2 = +got.T10Y2Y.last.value;
+      const y2 = y10 - spr2;
+      const spread2y = (spr2) * 100;
+      ycRisk = mapYC(spread2y);
+      els.ycVal.textContent = `${fmt(y10,2)}% – ${fmt(y2,2)}% (spread: ${fmt(spread2y,0)} bps)`;
+      const t = classify(ycRisk); setBar(els.ycBar,ycRisk); setTag(els.ycTag,t.l,t.c);
+    } else { els.ycVal.textContent="–"; setTag(els.ycTag,"Neutral","warn"); }
+
+    if (got.DGS10 && got.T10Y3M){
+      const y10 = +got.DGS10.last.value;
+      const spr3 = +got.T10Y3M.last.value;
+      const y3m = y10 - spr3;
+      const spread3m = (spr3) * 100;
+      yc3Risk = mapYC3(spread3m);
+      els.yc3mVal.textContent = `${fmt(y10,2)}% – ${fmt(y3m,2)}% (spread: ${fmt(spread3m,0)} bps)`;
+      const t = classify(yc3Risk); setBar(els.yc3mBar,yc3Risk); setTag(els.yc3mTag,t.l,t.c);
+    } else { els.yc3mVal.textContent="–"; setTag(els.yc3mTag,"Neutral","warn"); }
+
+    let sahmRisk=50;
+    if (got.UNRATE){
+      sahmRisk = mapSahm(got.UNRATE.series);
+      const lastU = +got.UNRATE.series.at(-1).value;
+      els.sahmVal.textContent = `${fmt(lastU,1)}% (Sahm risk: ${fmt(sahmRisk,0)})`;
+      const t = classify(sahmRisk); setBar(els.sahmBar,sahmRisk); setTag(els.sahmTag,t.l,t.c);
+    } else { els.sahmVal.textContent="–"; setTag(els.sahmTag,"Neutral","warn"); }
+
+    let cuRisk=50;
+    if (got.CUMFNS){
+      const v = +got.CUMFNS.last.value; cuRisk = mapCU(v);
+      els.cuVal.textContent = fmt(v,1)+"%"; setBar(els.cuBar,cuRisk);
+      const t = classify(cuRisk); setTag(els.cuTag,t.l,t.c);
+    } else { els.cuVal.textContent="–"; setTag(els.cuTag,"Neutral","warn"); }
+
+    let fsiRisk=50;
+    if (got.STLFSI2){
+      const v = +got.STLFSI2.last.value; fsiRisk = mapFSI(v);
+      els.fsiVal.textContent = fmt(v,2); setBar(els.fsiBar,fsiRisk);
+      const t = classify(fsiRisk); setTag(els.fsiTag,t.l,t.c);
+    } else { els.fsiVal.textContent="–"; setTag(els.fsiTag,"Neutral","warn"); }
+
+    let claimsRisk=50;
+    if (got.ICSA && got.ICSA.series?.length>=4){
+      const avg4 = got.ICSA.series.slice(-4).map(o=>+o.value).reduce((a,b)=>a+b,0)/4;
+      claimsRisk = mapClaims(avg4);
+      els.claimsVal.textContent = fmt(avg4,0);
+      const t = classify(claimsRisk); setBar(els.claimsBar,claimsRisk); setTag(els.claimsTag,t.l,t.c);
+    } else { els.claimsVal.textContent="–"; setTag(els.claimsTag,"Neutral","warn"); }
+
+    let vixRisk=50;
+    if (got.VIXCLS){
+      const v = +got.VIXCLS.last.value; vixRisk = mapVIX(v);
+      els.vixVal.textContent = fmt(v,1); setBar(els.vixBar,vixRisk);
+      const t = classify(vixRisk); setTag(els.vixTag,t.l,t.c);
+      window.__lastVIX = v;
+    } else { els.vixVal.textContent="–"; setTag(els.vixTag,"Neutral","warn"); }
+
+    let leadRisk=50;
+    if (got.USSLIND){
+      const v = +got.USSLIND.last.value; leadRisk = mapLead(v);
+      els.leadVal.textContent = fmt(v,2); setBar(els.leadBar,leadRisk);
+      const t = classify(leadRisk); setTag(els.leadTag,t.l,t.c);
+    } else { els.leadVal.textContent="–"; setTag(els.leadTag,"Neutral","warn"); }
+
+    let payRisk=50;
+    if (got.PAYEMS && got.PAYEMS.series?.length>=13){
+      const pv = got.PAYEMS.series.map(o=>+o.value);
+      const yoy = []; for (let i=13;i<pv.length;i++) yoy.push((pv[i]/pv[i-12]-1)*100);
+      const l = yoy.at(-1); payRisk = mapPayYoY(l);
+      els.payemsVal.textContent = `${fmt(l,2)}%`;
+      const t = classify(payRisk); setBar(els.payemsBar,payRisk); setTag(els.payemsTag,t.l,t.c);
+    } else { els.payemsVal.textContent="–"; setTag(els.payemsTag,"Neutral","warn"); }
+
+    let sentRisk=50;
+    if (got.UMCSENT){
+      const v = +got.UMCSENT.last.value; sentRisk = mapSent(v);
+      els.sentVal.textContent = fmt(v,1);
+      const t = classify(sentRisk); setBar(els.sentBar,sentRisk); setTag(els.sentTag,t.l,t.c);
+    } else { els.sentVal.textContent="–"; setTag(els.sentTag,"Neutral","warn"); }
+
+    const W = loadWeights();
+    els.weightsSummary.textContent = weightsToText(W);
+
+    const arr = [
+      ['yc', ycRisk, !!(got.DGS10 && got.T10Y2Y)],
+      ['yc3', yc3Risk, !!(got.DGS10 && got.T10Y3M)],
+      ['sahm', sahmRisk, !!got.UNRATE],
+      ['cu', cuRisk, !!got.CUMFNS],
+      ['fsi', fsiRisk, !!got.STLFSI2],
+      ['claims', claimsRisk, !!got.ICSA],
+      ['vix', vixRisk, !!got.VIXCLS],
+      ['lei', leadRisk, !!got.USSLIND],
+      ['payems', payRisk, !!got.PAYEMS],
+      ['sent', sentRisk, !!got.UMCSENT],
+    ];
+    const used = arr.filter(([,,ok])=>ok);
+    const wsum = used.reduce((a,[k])=>a+(W[k]||0),0) || 1;
+    const val = Math.round( used.reduce((a,[k,v])=>a+v*(W[k]||0),0) / wsum );
+    const total = Math.max(0, Math.min(100, val));
+    setBar(els.totalBar,total);
+    els.score.textContent = String(total);
+    els.updated.textContent = new Date().toLocaleString();
+    setTag(els.riskTag, total<40?"Positive":total>60?"Negative":"Neutral", total<40?"ok":total>60?"bad":"warn");
+
+    await pause();
+    await step('Crypto (BTC risk)', () => fetchCrypto()); 
+    await step('Crypto wind',     () => fetchCryptoWind(key));
+    await step('US macro table',  () => fillMacroTable(key, { force: !!opts.forceMacro }));
+    await step('Upcoming releases', () => fillUpcomingReleases(key));
+
+    progress("Ready.");
+  } catch (err) {
+    console.error(err);
+    progress("Fault: " + err.message);
+  } finally {
+    window.__runInFlight = false;
+  }
+}
+
+
+/* init */
+(function init(){
+  const saved = localStorage.getItem("fred_api_key") || "";
+  els.apiKey.value = saved;
+
+  els.save.onclick = () => {
+    localStorage.setItem("fred_api_key", els.apiKey.value.trim());
+    progress("API key saved.");
+  };
+  els.refresh.onclick = (e) => run({ forceMacro: e && (e.shiftKey || e.altKey) });
+
+  (function bindWeightsUI(){
+    if (!els.weightsBtn || !els.weightsPanel || !els.w_yc) return;
+
+    const sliders = [
+      ['yc',     els.w_yc,     els.w_yc_val],
+      ['yc3',    els.w_yc3,    els.w_yc3_val],
+      ['sahm',   els.w_sahm,   els.w_sahm_val],
+      ['cu',     els.w_cu,     els.w_cu_val],
+      ['fsi',    els.w_fsi,    els.w_fsi_val],
+      ['claims', els.w_claims, els.w_claims_val],
+      ['vix',    els.w_vix,    els.w_vix_val],
+      ['lei',    els.w_lei,    els.w_lei_val],
+      ['payems', els.w_payems, els.w_payems_val],
+      ['sent',   els.w_sent,   els.w_sent_val],
+    ];
+
+    function uiSum(){
+      const s = sliders.reduce((a,[,sl]) => a + (Number(sl.value)||0), 0);
+      els.weightsSum.textContent = `Amount: ${s}% (when saving is 100%)`;
+      if (els.weightsSave) els.weightsSave.disabled = (s <= 0);
+    }
+
+    function uiSetFromWeights(w){
+      sliders.forEach(([k,sl,lab])=>{
+        const v = Math.round(((w[k]||0) * 100));
+        sl.value = String(v);
+        if (lab) lab.textContent = v + '%';
+      });
+      uiSum();
+    }
+
+    els.weightsBtn.onclick   = () => { els.weightsPanel.classList.toggle('open'); };
+    els.weightsReset.onclick = () => { uiSetFromWeights(DEFAULT_WEIGHTS); };
+    els.weightsSave.onclick = () => {
+      const raw = {};
+      sliders.forEach(([k,sl]) => raw[k] = Math.max(0, Number(sl.value)||0));
+      const sum = Object.values(raw).reduce((a,b)=>a+b,0) || 1;
+      const norm = {};
+      Object.keys(raw).forEach(k => norm[k] = raw[k] / sum);
+      saveWeights(norm);
+      els.weightsPanel.classList.remove('open');
+      els.weightsSummary.textContent = weightsToText(norm);
+      run();
+    };
+
+    sliders.forEach(([key, sl, lab])=>{
+      sl.addEventListener('input', ()=>{
+        let v = Math.max(0, Math.min(30, Number(sl.value)||0));
+        const others = sliders
+          .filter(([k]) => k !== key)
+          .reduce((a,[,sl2]) => a + (Number(sl2.value)||0), 0);
+        const maxForThis = Math.max(0, 100 - others);
+        if (v > maxForThis) v = maxForThis;
+        sl.value = String(v);
+        if (lab) lab.textContent = v + '%';
+        uiSum();
+      });
+    });
+
+    const w0 = loadWeights();
+    if (els.weightsSummary) els.weightsSummary.textContent = weightsToText(w0);
+    uiSetFromWeights(w0);
+  })();
+
+  if (saved) run();
+  setInterval(() => {
+    if (localStorage.getItem("fred_api_key")) run();
+  }, 6*60*60*1000);
+})();
+</script>
+</body>
+</html>
