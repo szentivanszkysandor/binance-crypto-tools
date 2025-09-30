@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Privacy Policy – Binance – Crypto Tools & Alert</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }
+    h1, h2 { color: #b00; }
+    ul { padding-left: 1.25rem; }
+    code { background:#f7f7f7; padding:2px 4px; border-radius:3px; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p><strong>Effective Date:</strong> September 30, 2025</p>
+
+  <h2>1. Overview</h2>
+  <p>
+    The <strong>“Binance – Crypto Tools & Alert”</strong> Chrome extension provides a unified interface for monitoring live Binance Spot market data
+    and using built-in, static HTML tools packaged with the extension (Order Book + Trades, Market Trades, Taker Flow,
+    EMA/RSI/MACD/ATR Monitor, Pattern Scanner, US Macro/Crypto Risk).
+  </p>
+  <p>
+    It displays real-time <em>Price</em>, <em>RSI(14)</em>, <em>24h%</em>, and an <em>EMA Trend</em> badge (20/50/200), and supports cross-based
+    Price Alerts with configurable hysteresis and minimum repeat interval. The extension does <strong>not</strong> trade, manage wallets,
+    or access private Binance accounts. It is independent and <strong>not affiliated with Binance</strong>. All data is informational and intended
+    for educational/analytical purposes.
+  </p>
+
+  <h2>2. Permissions Used</h2>
+  <ul>
+    <li><strong>storage</strong> — saves your configuration locally:
+      <ul>
+        <li>Selected Spot symbols and RSI timeframes; row order.</li>
+        <li>UI preferences (hide default tool buttons, hide Live Prices section, Compact View, active tab).</li>
+        <li>Column toggles (EMA 20/50/200, MACD, ATR%, BB width, 24h Volume) and minor UI state (e.g., dismissed tips).</li>
+        <li>Price Alerts (symbol, Above/Below, target, enabled, one-shot) and behavior (muteAlerts, hysteresis %, minRepeatMs, alertsStyle, hideAlerts in popup).</li>
+        <li>Local symbols cache for autocomplete (Binance Spot list; ~24h TTL).</li>
+      </ul>
+    </li>
+
+    <li><strong>notifications</strong> — shows a system notification <em>only</em> when a Price Alert fires (includes context like symbol, direction, target, latest price/distance; no personal data). Notifications offer action buttons (“Open on Binance”, “Disable alert”).</li>
+
+    <li><strong>alarms</strong> — schedules lightweight background wake-ups so the service worker can periodically evaluate alerts and refresh minimal market data when the popup is closed. Not used for tracking or profiling.</li>
+
+    <li><strong>offscreen</strong> — used solely to play a short alert <strong>sound</strong> reliably (in line with Chrome audio policies) even when the popup is closed. The offscreen document is created on demand and torn down afterwards; it does not capture content or user data.</li>
+
+    <li><strong>Host permission</strong> — <code>https://api.binance.com/*</code> to fetch public, read-only market data:
+      <ul>
+        <li>Live prices/tickers and 24-hour stats.</li>
+        <li>Candlesticks (klines) for local indicator calculations (RSI/EMA/MACD/ATR).</li>
+        <li>Exchange info / Spot symbol list for autocomplete and validation.</li>
+      </ul>
+      No authentication or account access; no trading/withdrawal endpoints are used.
+    </li>
+  </ul>
+  <p>
+    The extension does <strong>not</strong> request access to browser tabs, browsing history, or other sensitive permissions.
+  </p>
+
+  <h3>2.1 Clipboard Use</h3>
+  <p>
+    When you click <em>“Copy address”</em> in the donation modal, the extension writes the shown BNB (BEP20) address to your clipboard.
+    It does not read clipboard contents and never accesses the clipboard without your direct click.
+  </p>
+
+  <h2>3. Data Storage and Use</h2>
+  <ul>
+    <li><strong>User settings:</strong> Stored in <code>chrome.storage.sync</code> (and may sync with your Google account if Chrome Sync is enabled) and in <code>chrome.storage.local</code> for caches.</li>
+    <li><strong>No personal data:</strong> The extension does not collect email addresses, passwords, wallet keys, balances, or browsing history.</li>
+    <li><strong>No external transmission:</strong> Apart from anonymous HTTPS requests to Binance public APIs, no data is sent anywhere. Nothing is shared with third parties.</li>
+  </ul>
+
+  <h2>4. Binance API Data</h2>
+  <ul>
+    <li>All requests go directly to official Binance endpoints and are <strong>read-only</strong> (no account login, no API keys).</li>
+    <li>Requests contain <strong>no personal identifiers</strong>. Results are processed locally to display prices/indicators and evaluate alerts.</li>
+  </ul>
+
+  <h2>5. Third-Party Services</h2>
+  <ul>
+    <li><strong>Binance public APIs:</strong> sole source of market data. See Binance’s own policies for their services.</li>
+    <li><strong>Donations:</strong> Optional Binance QR / PayPal links open external payment pages. The extension does not collect or store payment data.</li>
+    <li><strong>Tools:</strong> All tool pages (Order Book, Taker Flow, etc.) are bundled static HTML within the extension, not remote web apps.</li>
+  </ul>
+
+  <h2>6. No Tracking or Analytics</h2>
+  <ul>
+    <li>No telemetry, analytics, or behavior tracking.</li>
+    <li>No cookies or fingerprinting.</li>
+    <li>No script injection into third-party webpages; the extension does not read page contents.</li>
+  </ul>
+
+  <h2>7. Incognito Mode</h2>
+  <p>
+    If you enable the extension for Incognito in Chrome, its privacy behavior remains the same as in normal mode.
+  </p>
+
+  <h2>8. Security</h2>
+  <ul>
+    <li>All data remains within Chrome’s storage areas controlled by the browser.</li>
+    <li>All external requests use <strong>HTTPS</strong>.</li>
+    <li>No backend servers; no handling of credentials or payment information.</li>
+    <li>No remote code execution; the extension does not fetch or execute code from external sources.</li>
+  </ul>
+
+  <h2>9. Data Retention &amp; Deletion</h2>
+  <ul>
+    <li><strong>Retention:</strong> Your symbol list, alerts, and preferences stay saved until you edit/reset them.</li>
+    <li><strong>Manual management:</strong> Use the Options page to modify or clear your configuration at any time.</li>
+    <li><strong>Uninstall:</strong> Removing the extension deletes its data from Chrome.</li>
+  </ul>
+
+  <h2>10. Changes</h2>
+  <p>
+    Any changes to this policy (e.g., due to feature or permission updates) will be reflected in the Chrome Web Store listing and the hosted policy page.
+  </p>
+
+  <h2>11. Contact</h2>
+  <p>
+    For support or privacy questions, please use the contact information provided on the Chrome Web Store listing.
+  </p>
+
+  <h2>12. Children’s Privacy</h2>
+  <p>
+    This extension is not directed to children under 13 and does not knowingly collect personal information from children.
+  </p>
+
+  <h2>13. No Financial Advice</h2>
+  <p>
+    The extension provides market data and tools for informational and educational purposes only. It does not constitute financial, investment, or trading advice. You are solely responsible for your trading decisions.
+  </p>
+
+  <h2>14. Data Practices Summary</h2>
+  <ul>
+    <li><strong>Data collected:</strong> None (only local settings in Chrome storage).</li>
+    <li><strong>Data shared / sold:</strong> None.</li>
+    <li><strong>Purpose of network calls:</strong> Public market data from Binance only.</li>
+  </ul>
+
+  <p><em>This extension complies with the Chrome Web Store Developer Program Policies and Google’s User Data policies. It collects no personal information and shares nothing with third parties.</em></p>
+</body>
+</html>
