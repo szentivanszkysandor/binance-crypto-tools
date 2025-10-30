@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Privacy Policy – Binance – Crypto Tools & Alert</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* same base style as the original policy */
+    body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }
+    h1, h2 { color: #b00; }
+    ul { padding-left: 1.25rem; }
+    code { background:#f7f7f7; padding:2px 4px; border-radius:3px; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p><strong>Effective Date:</strong> October 30, 2025</p>
+
+  <h2>1. Overview</h2>
+  <p>
+    The <strong>“Binance – Crypto Tools &amp; Alert”</strong> Chrome extension is a read-only dashboard for
+    <em>Binance Spot</em> market data. It shows live <em>Price</em>, <em>RSI(14)</em>, <em>24h%</em>, and an <em>EMA Trend</em> (20/50/200),
+    supports manual and automatic alerts, and includes several bundled tools. The extension is independent and
+    <strong>not affiliated with Binance</strong>; it never requests API keys, logins, or wallet access.
+  </p>
+
+  <h3>What you can do with the extension</h3>
+  <ul>
+    <li><strong>Manual Price Alerts</strong> — cross-based triggers (Above/Below) with hysteresis, minimum repeat, optional one-shot and mute; shows a browser notification on trigger.</li>
+    <li><strong>Auto Alerts</strong> — locally evaluated RSI, EMA cross (20×50/200), Price×EMA (20/50/200), Volume Spike (open-bar gates: progress/body/persist) and 24h% change; global cooldown; optional closed-bar mode; per-indicator timeframe lists; fine EMA filters (separation/hold/full).</li>
+    <li><strong>Market Pulse</strong> — context tiles (Fear &amp; Greed, BTC mempool/fees, BTC/ETH funding &amp; basis, market breadth, total market cap) from public read-only APIs, cached briefly for performance.</li>
+    <li><strong>Global Ticker</strong> — an optional <em>TradingView</em> ticker-tape widget (iframe) for macro indices/FX/commodities (e.g., DXY, US 2Y/10Y, VIX, S&amp;P 500, WTI, Gold).</li>
+    <li><strong>Built-in Tools</strong> (static HTML packaged with the extension): <em>Order Book + Trades</em>, <em>Futures Sentiment</em>, <em>Taker Flow</em>,
+        <em>EMA/RSI/MACD/ATR Monitor</em>, <em>Pattern Scanner</em>, <em>US Macro/Crypto Risk</em>. These pages run locally; they are not remote web apps.</li>
+  </ul>
+
+  <p>All indicator math and alert evaluation happens locally. The extension does not collect personal data or browsing history and does not transmit identifiers.</p>
+
+  <h2>2. Permissions Used</h2>
+  <ul>
+    <li><strong>storage</strong> — Saves your configuration and small caches:
+      <ul>
+        <li><em>Live Prices</em> preferences (selected Spot symbols/timeframes; column toggles for EMA 20/50/200, MACD, ATR%, BB width, 24h volume; row grouping/ordering; compact view; active tab; hidden toolbars).</li>
+        <li><em>Manual Alerts</em> (symbol, condition, target, enabled, one-shot, mute) and behavior (hysteresis %, minRepeatMs, cooldown, alert style, hide alerts in popup).</li>
+        <li><em>Auto Alerts</em> settings (RSI thresholds, EMA mode/filters, Price×EMA/Volume Spike parameters, closed-bar mode, per-indicator TF lists; 24h% +/- defaults).</li>
+        <li>Short-lived caches: Market Pulse snapshots and recent klines used for local indicator math.</li>
+      </ul>
+    </li>
+    <li><strong>notifications</strong> — Displays a system notification only when a manual or auto alert fires (symbol + event context; no personal data). Actions may include “Open on Binance” or “Disable alert”.</li>
+    <li><strong>alarms</strong> — Periodic wake-ups for the service worker to refresh public data and evaluate alerts while the popup is closed. Not used for tracking or profiling.</li>
+    <li><strong>offscreen</strong> — Creates an audio-only offscreen page to play alert sounds reliably (Chrome autoplay policy). No mic/cam; no recording; destroyed after use.</li>
+    <li><strong>Host permissions (read-only)</strong> — Public REST/WS endpoints only:
+      <ul>
+        <li><code>https://api.binance.com/*</code> (Spot) and <code>https://fapi.binance.com/*</code> (public Futures endpoints for funding &amp; basis in Market Pulse).</li>
+        <li><code>https://stream.binance.com/*</code> and <code>https://fstream.binance.com/*</code> for real-time WebSocket streams (prices/klines) used by the background/offscreen components.</li>
+        <li><code>https://api.coingecko.com/*</code>, <code>https://api.alternative.me/*</code>, <code>https://mempool.space/*</code> — public index/chain metrics for Market Pulse.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>2.1 TradingView widget (iframe)</h3>
+  <p>
+    The “Global Ticker” block embeds an official TradingView price widget via <code>&lt;iframe&gt;</code> from
+    <code>https://s.tradingview.com/</code>. The extension does not programmatically call TradingView APIs, does not inject user identifiers,
+    and does not read cookies or network traffic inside the iframe. TradingView may process data under its own policy on its domain.
+    You can disable this block anytime in Options.
+  </p>
+
+  <h3>2.2 Clipboard Use</h3>
+  <p>
+    When you click “Copy address” in the donation dialog, the displayed BNB (BEP-20) address is written to your clipboard.
+    The extension never reads clipboard contents and never writes without your explicit action.
+  </p>
+
+  <h2>3. Data Storage and Use</h2>
+  <ul>
+    <li><strong>User settings</strong> live in Chrome’s storage areas (<code>sync</code>/<code>local</code>). Short-lived caches (Market Pulse snapshots, recent klines, cooldown stamps) are used strictly to render UI and evaluate alerts and expire automatically.</li>
+    <li><strong>No personal data</strong> is collected, processed, or transmitted. No browsing history, account credentials, wallet keys, or payment data.</li>
+    <li><strong>Network use</strong> is limited to the public endpoints listed above (HTTPS/WS). No analytics SDKs or tracking pixels are embedded.</li>
+  </ul>
+
+  <h2>4. Binance API &amp; WebSocket Data</h2>
+  <ul>
+    <li>All requests are <strong>read-only</strong>; no login or API keys; no account endpoints.</li>
+    <li>REST: prices/24h/klines/premium index; WS: price/kline streams for near real-time alerts even when the popup is closed.</li>
+    <li>Requests carry no personal identifiers; results are processed locally for indicators (RSI/EMA/MACD/ATR) and alert checks.</li>
+  </ul>
+
+  <h2>5. Market Pulse sources</h2>
+  <ul>
+    <li>Fear &amp; Greed — <code>api.alternative.me/fng</code></li>
+    <li>BTC mempool &amp; fees — <code>mempool.space/api/…</code></li>
+    <li>Funding &amp; basis for BTC/ETH — <code>fapi.binance.com/fapi/v1/premiumIndex</code></li>
+    <li>24h breadth (advancers/decliners by volume) — <code>api.binance.com/api/v3/ticker/24hr</code></li>
+    <li>Global crypto market cap &amp; dominance — <code>api.coingecko.com/api/v3/global</code></li>
+  </ul>
+  <p>Responses are cached for short periods in Chrome storage to reduce external requests. No personal data is attached to these calls.</p>
+
+  <h2>6. Auto Alerts (local evaluation)</h2>
+  <ul>
+    <li><strong>RSI</strong> thresholds, <strong>EMA cross</strong> (20×50/200), <strong>Price×EMA</strong> (20/50/200), <strong>Volume Spike</strong> (progress/body/persist gates), <strong>24h%</strong>.</li>
+    <li>Global cooldown; optional closed-bar mode; per-indicator timeframe lists; EMA filter modes (none / separation / separation+hold / full).</li>
+    <li>On trigger, a browser notification is displayed; if enabled, a short sound is played via offscreen audio.</li>
+  </ul>
+
+  <h2>7. Built-in Tools (static)</h2>
+  <p>
+    The following tools are packaged as static HTML within the extension and run locally:
+    <em>Order Book + Trades</em>, <em>Futures Sentiment</em>, <em>Taker Flow</em>, <em>EMA/RSI/MACD/ATR Monitor</em>,
+    <em>Pattern Scanner</em>, <em>US Macro/Crypto Risk</em>. They do not fetch or submit personal data.
+  </p>
+
+  <h2>8. Security &amp; No Tracking</h2>
+  <ul>
+    <li>No telemetry, analytics, or ad SDKs. No fingerprinting.</li>
+    <li>No content scripts that read page contents; the extension does not access tabs or history.</li>
+    <li>All outbound connections use HTTPS (and WS to Binance official hosts).</li>
+    <li>The offscreen document is ephemeral and audio-only.</li>
+  </ul>
+
+  <h2>9. Data Retention &amp; Deletion</h2>
+  <ul>
+    <li>Settings persist until you change or reset them in Options.</li>
+    <li>Short-lived caches auto-expire (minutes) or are cleared on reset/uninstall.</li>
+    <li>Uninstalling the extension removes its Chrome storage data.</li>
+  </ul>
+
+  <h2>10. Third-Party Services</h2>
+  <ul>
+    <li><strong>Binance public APIs</strong> — market/funding data only; see Binance’s terms for their services.</li>
+    <li><strong>Coingecko / Alternative.me / Mempool.space</strong> — public index feeds for Market Pulse (read-only).</li>
+    <li><strong>TradingView</strong> — embedded price widget (iframe) for macro assets; no direct API calls by the extension; subject to TradingView’s policy on their domain.</li>
+    <li><strong>Donations</strong> — optional external links (e.g., PayPal, Binance address); the extension does not collect payment information.</li>
+  </ul>
+
+  <h2>11. Incognito Mode</h2>
+  <p>Behavior and privacy are identical to normal mode; no additional data collection occurs.</p>
+
+  <h2>12. Children’s Privacy</h2>
+  <p>This extension is not directed to children under 13 and does not knowingly collect information from children.</p>
+
+  <h2>13. No Financial Advice</h2>
+  <p>All data and signals are informational/educational only and do not constitute investment, financial, or trading advice.</p>
+
+  <h2>14. Data Practices Summary</h2>
+  <ul>
+    <li><strong>Data collected:</strong> None (only local settings/caches in Chrome storage).</li>
+    <li><strong>Data shared/sold:</strong> None.</li>
+    <li><strong>Network calls:</strong> Public Binance REST/WS + public index APIs; optional TradingView <em>iframe</em> for display only.</li>
+  </ul>
+</body>
+</html>
